@@ -1,0 +1,27 @@
+seed: 11
+output_dir: outputs/gifteval_quantum
+dataset:
+  name: gift_eval
+  max_samples: 128
+  context: 48
+  horizon: 12
+  streaming: true
+victim:
+  hidden: 64
+training:
+  epochs: 10
+  batch_size: 16
+  learning_rate: 0.001
+attack:
+  prior: quantum
+  known_target: true
+  n_qubits: 6
+  layers: 2
+  shots: null
+  hidden: 64
+  steps: 300
+  learning_rate: 0.03
+  regularization: 0.001
+identifiability:
+  max_input_dimension: 128
+
