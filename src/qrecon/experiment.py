@@ -10,7 +10,12 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from .attacks import GradientInversionAttack, leak_gradients
+from .attacks import (
+    GradientInversionAttack,
+    infer_class_label_from_last_bias,
+    invert_first_linear_gradient,
+    leak_gradients,
+)
 from .data import (
     load_community_forensics,
     load_gifteval,
@@ -20,7 +25,7 @@ from .data import (
 )
 from .identifiability import gradient_jacobian_report
 from .metrics import reconstruction_metrics
-from .models import ForecastMLP, TinyConvNet
+from .models import ForecastMLP, ImageMLP, SmallLeNet, TinyConvNet
 from .quantum import ClassicalPrior, DirectPrior, QuantumPrior, quantum_resource_estimate
 
 
@@ -70,6 +75,11 @@ def _build_model(dataset: TensorDataset, task: str, config: dict[str, Any]) -> n
     if task == "forecasting":
         return ForecastMLP(x.shape[-1], y.shape[-1], config.get("hidden", 64))
     classes = max(2, int(y.max().item()) + 1)
+    architecture = config.get("architecture", "cnn")
+    if architecture == "mlp":
+        return ImageMLP(tuple(x.shape[1:]), classes, config.get("hidden", 128))
+    if architecture == "lenet":
+        return SmallLeNet(tuple(x.shape[1:]), classes, config.get("width", 6))
     return TinyConvNet(classes, config.get("width", 24))
 
 
@@ -90,7 +100,7 @@ def _train(model: nn.Module, dataset: TensorDataset, task: str, config: dict[str
 def _prior(shape: tuple[int, ...], mode: str, config: dict[str, Any]) -> nn.Module:
     kind = config.get("prior", "direct")
     if kind == "direct":
-        return DirectPrior(shape, mode)
+        return DirectPrior(shape, mode, bounded=config.get("bounded", True))
     if kind == "classical":
         return ClassicalPrior(
             shape, mode, config.get("latent_dim", 8), config.get("hidden", 64)
@@ -116,36 +126,54 @@ def run_experiment(config: dict[str, Any]) -> dict[str, Any]:
 
     true_x, true_target = (tensor[:1].clone() for tensor in dataset.tensors)
     observed = leak_gradients(model, true_x, true_target, task)
-    prior = _prior(tuple(true_x.shape), mode, config.get("attack", {}))
-    known_target = true_target if config.get("attack", {}).get("known_target", True) else None
-    attack = GradientInversionAttack(
-        model=model,
-        observed_gradients=observed,
-        prior=prior,
-        task=task,
-        mode=mode,
-        known_target=known_target,
-        target_shape=tuple(true_target.shape),
-        steps=config.get("attack", {}).get("steps", 300),
-        learning_rate=config.get("attack", {}).get("learning_rate", 0.05),
-        regularization=config.get("attack", {}).get("regularization", 1e-3),
-    )
-    result = attack.run()
+    attack_config = config.get("attack", {})
+    known_target = true_target if attack_config.get("known_target", True) else None
+    if known_target is None and task == "classification":
+        known_target = infer_class_label_from_last_bias(model, observed)
+
+    method = attack_config.get("method", "gradient_matching")
+    if method == "analytic_linear":
+        reconstruction = invert_first_linear_gradient(model, observed, tuple(true_x.shape))
+        reconstructed_target = (
+            known_target.detach()
+            if known_target is not None
+            else torch.full_like(true_target, float("nan"))
+        )
+        history = [{"step": 1.0, "objective": 0.0, "gradient_match": 0.0, "regularizer": 0.0}]
+    else:
+        prior = _prior(tuple(true_x.shape), mode, attack_config)
+        attack = GradientInversionAttack(
+            model=model,
+            observed_gradients=observed,
+            prior=prior,
+            task=task,
+            mode=mode,
+            known_target=known_target,
+            target_shape=tuple(true_target.shape),
+            steps=attack_config.get("steps", 300),
+            learning_rate=attack_config.get("learning_rate", 0.05),
+            regularization=attack_config.get("regularization", 1e-3),
+            optimizer_name=attack_config.get("optimizer", "adam"),
+        )
+        result = attack.run()
+        reconstruction = result.reconstruction
+        reconstructed_target = result.reconstructed_target
+        history = result.history
 
     report: dict[str, Any] = {
         "dataset": config["dataset"]["name"],
         "task": task,
-        "prior": config.get("attack", {}).get("prior", "direct"),
-        "metrics": reconstruction_metrics(true_x, result.reconstruction),
-        "history": result.history,
+        "attack_method": method,
+        "prior": attack_config.get("prior") if method != "analytic_linear" else None,
+        "metrics": reconstruction_metrics(true_x, reconstruction, mode=mode),
+        "history": history,
     }
     max_identifiability_dim = config.get("identifiability", {}).get("max_input_dimension", 256)
     if true_x.numel() <= max_identifiability_dim:
         report["identifiability"] = gradient_jacobian_report(
             model, true_x, true_target, task
         ).to_dict()
-    if config.get("attack", {}).get("prior") == "quantum":
-        attack_config = config["attack"]
+    if attack_config.get("prior") == "quantum" and method != "analytic_linear":
         report["quantum_resources"] = quantum_resource_estimate(
             attack_config.get("n_qubits", 6), attack_config.get("layers", 2), attack_config.get("shots")
         )
@@ -155,9 +183,9 @@ def run_experiment(config: dict[str, Any]) -> dict[str, Any]:
     torch.save(
         {
             "reference": true_x,
-            "reconstruction": result.reconstruction,
+            "reconstruction": reconstruction,
             "target": true_target,
-            "reconstructed_target": result.reconstructed_target,
+            "reconstructed_target": reconstructed_target,
         },
         output_dir / "reconstruction.pt",
     )
