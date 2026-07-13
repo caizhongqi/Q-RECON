@@ -33,6 +33,8 @@
 - CLOFAI/通用 ImageFolder 适配器；
 - 时间序列 MLP 与图像 CNN 受害模型；
 - 单样本梯度泄漏与梯度反演攻击；
+- 首层 Linear 单样本梯度的解析精确恢复；
+- iDLG 风格的分类标签自动推断；
 - 直接、经典生成和变分量子三类重构先验；
 - 基于完整梯度 Jacobian 秩的局部可识别性分析；
 - 重构质量与量子逻辑资源统计；
@@ -60,6 +62,9 @@ pytest
 ```bash
 qrecon --config configs/time_gifteval_quantum.yaml
 qrecon --config configs/image_community_forensics.yaml
+qrecon --config configs/time_gifteval_analytic.yaml
+qrecon --config configs/image_community_forensics_analytic.yaml
+qrecon --config configs/image_community_forensics_lenet_lbfgs.yaml
 ```
 
 实验结果写入 `outputs/`，包括 `report.json` 和重构张量
@@ -70,3 +75,7 @@ qrecon --config configs/image_community_forensics.yaml
 项目已形成可运行的第一阶段研究原型。当前量子模块是潜空间 VQC
 重构先验，不等价于相干受害模型预言机，因此不宣称端到端量子优势。
 后续优势结论必须同时核算数据编码、预言机构造、量子电路、shots 和结果读出成本。
+
+在 batch size 1、完整梯度可见且首层带偏置 Linear 直接接收原始输入时，
+解析攻击已在真实 GIFT-Eval 与 Community Forensics 样本上实现
+`within 1e-6 = 100%`；该结论不适用于任意 CNN 或聚合梯度。
