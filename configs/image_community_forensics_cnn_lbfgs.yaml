@@ -1,0 +1,26 @@
+seed: 31
+output_dir: outputs/community_forensics_cnn_lbfgs
+dataset:
+  name: community_forensics_small
+  max_samples: 8
+  image_size: 8
+  sampling: api
+  real_offset: 9000
+victim:
+  architecture: cnn
+  width: 4
+training:
+  epochs: 2
+  batch_size: 4
+  learning_rate: 0.001
+attack:
+  method: gradient_matching
+  prior: direct
+  bounded: true
+  known_target: false
+  optimizer: lbfgs
+  steps: 150
+  learning_rate: 1.0
+  regularization: 0.0001
+identifiability:
+  max_input_dimension: 0
