@@ -30,19 +30,17 @@ def leak_gradients(
 def gradient_matching_loss(
     candidate: tuple[torch.Tensor, ...], observed: tuple[torch.Tensor, ...]
 ) -> torch.Tensor:
-    squared = torch.zeros((), device=candidate[0].device)
+    relative = torch.zeros((), device=candidate[0].device)
     cosine_num = torch.zeros((), device=candidate[0].device)
     candidate_norm = torch.zeros((), device=candidate[0].device)
     observed_norm = torch.zeros((), device=candidate[0].device)
-    count = 0
     for left, right in zip(candidate, observed):
-        squared = squared + (left - right).square().sum()
+        relative = relative + (left - right).square().sum() / (right.square().sum() + 1e-12)
         cosine_num = cosine_num + (left * right).sum()
         candidate_norm = candidate_norm + left.square().sum()
         observed_norm = observed_norm + right.square().sum()
-        count += left.numel()
     cosine = cosine_num / (candidate_norm.sqrt() * observed_norm.sqrt() + 1e-12)
-    return squared / max(count, 1) + 0.1 * (1.0 - cosine)
+    return relative / max(len(candidate), 1) + 0.1 * (1.0 - cosine)
 
 
 def _regularizer(x: torch.Tensor, mode: str) -> torch.Tensor:
@@ -75,6 +73,7 @@ class GradientInversionAttack:
         steps: int = 300,
         learning_rate: float = 0.05,
         regularization: float = 1e-3,
+        optimizer_name: str = "adam",
         callback: Callable[[int, torch.Tensor], None] | None = None,
     ):
         self.model = model
@@ -87,6 +86,7 @@ class GradientInversionAttack:
         self.steps = steps
         self.learning_rate = learning_rate
         self.regularization = regularization
+        self.optimizer_name = optimizer_name
         self.callback = callback
 
     def run(self) -> AttackResult:
@@ -97,11 +97,9 @@ class GradientInversionAttack:
                 raise ValueError("classification attacks currently require a known/inferred label")
             target_parameter = nn.Parameter(torch.zeros(self.target_shape))
             parameters.append(target_parameter)
-        optimizer = torch.optim.Adam(parameters, lr=self.learning_rate)
         history: list[dict[str, float]] = []
 
-        for step in range(self.steps):
-            optimizer.zero_grad(set_to_none=True)
+        def objective_and_parts() -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
             x_hat = self.prior()
             target_hat = self.known_target if target_parameter is None else target_parameter
             dummy_loss = _task_loss(self.model(x_hat), target_hat, self.task)
@@ -111,20 +109,60 @@ class GradientInversionAttack:
             match = gradient_matching_loss(dummy_gradients, self.observed)
             prior_penalty = _regularizer(x_hat, self.mode)
             objective = match + self.regularization * prior_penalty
-            objective.backward()
-            optimizer.step()
+            return objective, match, prior_penalty, x_hat
 
-            if step == 0 or (step + 1) % max(1, self.steps // 20) == 0:
-                record = {
-                    "step": float(step + 1),
-                    "objective": float(objective.detach()),
-                    "gradient_match": float(match.detach()),
-                    "regularizer": float(prior_penalty.detach()),
-                }
-                history.append(record)
-                if self.callback is not None:
-                    self.callback(step + 1, x_hat.detach())
+        if self.optimizer_name == "lbfgs":
+            optimizer = torch.optim.LBFGS(
+                parameters,
+                lr=self.learning_rate,
+                max_iter=self.steps,
+                history_size=min(100, self.steps),
+                line_search_fn="strong_wolfe",
+                tolerance_grad=1e-12,
+                tolerance_change=1e-15,
+            )
+            closure_calls = 0
+
+            def closure() -> torch.Tensor:
+                nonlocal closure_calls
+                optimizer.zero_grad(set_to_none=True)
+                objective, match, prior_penalty, x_hat = objective_and_parts()
+                objective.backward()
+                closure_calls += 1
+                if closure_calls == 1 or closure_calls % max(1, self.steps // 20) == 0:
+                    history.append(
+                        {
+                            "step": float(closure_calls),
+                            "objective": float(objective.detach()),
+                            "gradient_match": float(match.detach()),
+                            "regularizer": float(prior_penalty.detach()),
+                        }
+                    )
+                    if self.callback is not None:
+                        self.callback(closure_calls, x_hat.detach())
+                return objective
+
+            optimizer.step(closure)
+        elif self.optimizer_name == "adam":
+            optimizer = torch.optim.Adam(parameters, lr=self.learning_rate)
+            for step in range(self.steps):
+                optimizer.zero_grad(set_to_none=True)
+                objective, match, prior_penalty, x_hat = objective_and_parts()
+                objective.backward()
+                optimizer.step()
+
+                if step == 0 or (step + 1) % max(1, self.steps // 20) == 0:
+                    record = {
+                        "step": float(step + 1),
+                        "objective": float(objective.detach()),
+                        "gradient_match": float(match.detach()),
+                        "regularizer": float(prior_penalty.detach()),
+                    }
+                    history.append(record)
+                    if self.callback is not None:
+                        self.callback(step + 1, x_hat.detach())
+        else:
+            raise ValueError(f"unknown optimizer: {self.optimizer_name}")
 
         final_target = self.known_target if target_parameter is None else target_parameter.detach()
         return AttackResult(self.prior().detach(), final_target.detach(), history)
-
