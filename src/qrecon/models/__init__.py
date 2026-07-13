@@ -1,5 +1,4 @@
-from .images import TinyConvNet
+from .images import ImageMLP, SmallLeNet, TinyConvNet
 from .time_series import ForecastMLP
 
-__all__ = ["TinyConvNet", "ForecastMLP"]
-
+__all__ = ["ImageMLP", "SmallLeNet", "TinyConvNet", "ForecastMLP"]
