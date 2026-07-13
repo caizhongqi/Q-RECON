@@ -1,0 +1,23 @@
+seed: 13
+output_dir: outputs/time_2026_direct
+dataset:
+  name: time_2026
+  root: data/TIME
+  max_samples: 128
+  context: 96
+  horizon: 24
+victim:
+  hidden: 96
+training:
+  epochs: 10
+  batch_size: 16
+  learning_rate: 0.001
+attack:
+  prior: direct
+  known_target: true
+  steps: 400
+  learning_rate: 0.05
+  regularization: 0.001
+identifiability:
+  max_input_dimension: 128
+
