@@ -1,0 +1,26 @@
+seed: 31
+output_dir: outputs/community_forensics_lenet_lbfgs
+dataset:
+  name: community_forensics_small
+  max_samples: 8
+  image_size: 8
+  sampling: api
+  real_offset: 9000
+victim:
+  architecture: lenet
+  width: 6
+training:
+  epochs: 2
+  batch_size: 4
+  learning_rate: 0.001
+attack:
+  method: gradient_matching
+  prior: direct
+  bounded: false
+  known_target: false
+  optimizer: lbfgs
+  steps: 800
+  learning_rate: 1.0
+  regularization: 0.0
+identifiability:
+  max_input_dimension: 0
