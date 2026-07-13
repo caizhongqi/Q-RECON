@@ -23,6 +23,7 @@
 
 - [研究创新与论文路线](docs/RESEARCH_INNOVATION.md)
 - [数据集与下载方式](docs/DATASETS.md)
+- [本地验证记录](docs/VERIFICATION.md)
 
 ## 已实现功能
 
