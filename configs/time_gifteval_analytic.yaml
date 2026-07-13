@@ -1,0 +1,20 @@
+seed: 23
+output_dir: outputs/gifteval_analytic
+dataset:
+  name: gift_eval
+  max_samples: 32
+  context: 48
+  horizon: 12
+  streaming: true
+victim:
+  hidden: 64
+training:
+  epochs: 5
+  batch_size: 16
+  learning_rate: 0.001
+attack:
+  method: analytic_linear
+  known_target: true
+identifiability:
+  max_input_dimension: 64
+
