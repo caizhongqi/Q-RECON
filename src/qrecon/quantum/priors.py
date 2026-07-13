@@ -21,14 +21,15 @@ def _bound(raw: torch.Tensor, mode: str) -> torch.Tensor:
 
 
 class DirectPrior(nn.Module):
-    def __init__(self, shape: tuple[int, ...], mode: str):
+    def __init__(self, shape: tuple[int, ...], mode: str, bounded: bool = True):
         super().__init__()
         self.shape = shape
         self.mode = mode
+        self.bounded = bounded
         self.raw = nn.Parameter(torch.randn(shape) * 0.1)
 
     def forward(self) -> torch.Tensor:
-        return _bound(self.raw, self.mode)
+        return _bound(self.raw, self.mode) if self.bounded else self.raw
 
 
 class ClassicalPrior(nn.Module):
@@ -110,4 +111,3 @@ def quantum_resource_estimate(n_qubits: int, layers: int, shots: int | None) -> 
         "nominal_depth": 1 + 4 * layers,
         "shots_per_forward": shots,
     }
-
