@@ -22,3 +22,36 @@ class TinyConvNet(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.classifier(self.features(x).flatten(1))
 
+
+class ImageMLP(nn.Module):
+    """Batch-one exact-recovery baseline with a raw-input first linear layer."""
+
+    def __init__(self, image_shape: tuple[int, int, int], classes: int = 2, hidden: int = 128):
+        super().__init__()
+        channels, height, width = image_shape
+        self.network = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(channels * height * width, hidden),
+            nn.GELU(),
+            nn.Linear(hidden, classes),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.network(x)
+
+
+class SmallLeNet(nn.Module):
+    """DLG-style shallow convolutional victim for high-fidelity inversion."""
+
+    def __init__(self, image_shape: tuple[int, int, int], classes: int = 2, width: int = 6):
+        super().__init__()
+        channels, height, width_pixels = image_shape
+        self.network = nn.Sequential(
+            nn.Conv2d(channels, width, kernel_size=3, padding=1),
+            nn.Sigmoid(),
+            nn.Flatten(),
+            nn.Linear(width * height * width_pixels, classes),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.network(x)
