@@ -6,11 +6,12 @@ PennyLane 0.45.1.
 ## Unit tests
 
 ```text
-2 passed
+4 passed
 ```
 
 The tests cover gradient extraction, local Jacobian-rank analysis,
-reconstruction metrics and quantum logical-resource estimates.
+reconstruction metrics, analytic input recovery, label inference and quantum
+logical-resource estimates.
 
 ## Synthetic end-to-end experiment
 
@@ -39,3 +40,45 @@ A two-qubit, one-layer `QuantumPrior` completed differentiable gradient
 inversion for two optimization steps. This validates second-order derivatives
 through the VQC and victim-gradient matching objective.
 
+## Exact batch-one linear-layer recovery
+
+For a first biased linear layer and a single training sample,
+
+```text
+grad(W) = delta outer x
+grad(b) = delta
+```
+
+so the raw input is recovered by a least-squares ratio across output rows.
+
+### GIFT-Eval + ForecastMLP
+
+- MSE: `4.06e-15`
+- maximum absolute error: `2.38e-7`
+- values within `1e-6`: `100%`
+- bitwise floating-point equality: `58.33%`
+
+### Community Forensics + ImageMLP
+
+- MSE: `3.60e-16`
+- maximum absolute error: `1.19e-7`
+- pixels within `1e-6`: `100%`
+- recovered 8-bit pixels equal to reference: `100%`
+- automatically inferred class label: correct
+
+Floating-point bitwise equality is lower because multiplication followed by
+division can differ in the least significant bits. The recovered image becomes
+identical after conversion back to its 8-bit representation.
+
+## Convolutional victim
+
+The shallow sigmoid LeNet-style victim with LBFGS inversion achieved:
+
+- PSNR: `57.34 dB`
+- maximum absolute error: `0.0040`
+- pixels within `0.01`: `100%`
+- recovered 8-bit pixels equal to reference: `86.46%`
+
+The deeper three-convolution `TinyConvNet` remains substantially harder and is
+not claimed as exact recovery. This architecture-dependent gap is an explicit
+research result rather than being hidden behind gradient-matching loss.
