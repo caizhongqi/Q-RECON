@@ -1,0 +1,22 @@
+seed: 7
+output_dir: outputs/smoke
+dataset:
+  name: synthetic_time
+  max_samples: 12
+  context: 8
+  horizon: 2
+victim:
+  hidden: 12
+training:
+  epochs: 2
+  batch_size: 6
+  learning_rate: 0.01
+attack:
+  prior: direct
+  known_target: true
+  steps: 20
+  learning_rate: 0.08
+  regularization: 0.0001
+identifiability:
+  max_input_dimension: 64
+
