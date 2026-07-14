@@ -12,6 +12,12 @@ from .arithmetic import (
     compile_structure_preserving_affine_oracle,
     compile_structure_preserving_threshold_oracle,
 )
+from .comparators import (
+    AffineEqualityLayout,
+    ReversibleIntegerAffineEqualityOracle,
+    append_equality_to_constant,
+    compile_structure_preserving_affine_equality_oracle,
+)
 from .compiler import (
     MintermGate,
     OracleResourceEstimate,
@@ -66,6 +72,7 @@ from .reversible import (
 
 __all__ = [
     "ANFOracle",
+    "AffineEqualityLayout",
     "AffineRangeReport",
     "AffineRowRange",
     "ClassicalSearchCosts",
@@ -88,6 +95,7 @@ __all__ = [
     "QuantizedNetwork",
     "ReversibleCircuit",
     "ReversibleGate",
+    "ReversibleIntegerAffineEqualityOracle",
     "ReversibleIntegerAffinePredicateOracle",
     "ReversibleIntegerAffineValueOracle",
     "ReversibleIntegerMLPPredicateOracle",
@@ -97,10 +105,12 @@ __all__ = [
     "affine_range_report",
     "analyze_finite_oracle",
     "append_cdkm_fixed_adder",
+    "append_equality_to_constant",
     "append_signed_relu_copy",
     "compare_end_to_end_search_costs",
     "compare_exact_syntheses",
     "compile_model_value_oracle",
+    "compile_structure_preserving_affine_equality_oracle",
     "compile_structure_preserving_affine_oracle",
     "compile_structure_preserving_mlp_threshold_oracle",
     "compile_structure_preserving_threshold_oracle",
