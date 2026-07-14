@@ -1,6 +1,7 @@
 """Bit-exact quantized models and finite coherent-oracle baselines."""
 
 from .analysis import FiniteIdentifiabilityReport, analyze_finite_oracle
+from .anf import ANFOracle, MonomialGate, SynthesisComparison, compare_exact_syntheses
 from .compiler import (
     MintermGate,
     OracleResourceEstimate,
@@ -29,18 +30,22 @@ from .models import (
 )
 
 __all__ = [
+    "ANFOracle",
     "FiniteIdentifiabilityReport",
     "FixedPointFormat",
     "GroverResourceEstimate",
     "GroverSimulationResult",
     "LayerRangeReport",
     "MintermGate",
+    "MonomialGate",
     "NetworkRangeReport",
     "OracleResourceEstimate",
     "QuantizedAffineLayer",
     "QuantizedNetwork",
+    "SynthesisComparison",
     "TruthTableOracle",
     "analyze_finite_oracle",
+    "compare_exact_syntheses",
     "compile_model_value_oracle",
     "compile_verifier_oracle",
     "estimate_grover_resources",
