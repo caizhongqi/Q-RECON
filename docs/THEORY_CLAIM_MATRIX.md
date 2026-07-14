@@ -8,7 +8,11 @@ the coherent compiler contract in
 [`COHERENT_ORACLE_SPEC.md`](COHERENT_ORACLE_SPEC.md), the exact finite compiler
 proofs in
 [`TRUTH_TABLE_ORACLE_BASELINE.md`](TRUTH_TABLE_ORACLE_BASELINE.md) and
-[`ANF_ORACLE_OPTIMIZATION.md`](ANF_ORACLE_OPTIMIZATION.md), and the empirical
+[`ANF_ORACLE_OPTIMIZATION.md`](ANF_ORACLE_OPTIMIZATION.md), the polynomial
+structure-preserving compiler proofs in
+[`STRUCTURE_PRESERVING_AFFINE_ORACLE.md`](STRUCTURE_PRESERVING_AFFINE_ORACLE.md)
+and [`REVERSIBLE_MLP_ORACLE.md`](REVERSIBLE_MLP_ORACLE.md), the matched-cost rules
+in [`END_TO_END_COST_PROTOCOL.md`](END_TO_END_COST_PROTOCOL.md), and the empirical
 protocol in [`THEORY_EVALUATION_PROTOCOL.md`](THEORY_EVALUATION_PROTOCOL.md).
 
 | Claim | Mathematical status | Executable evidence | Publication status |
@@ -30,8 +34,11 @@ protocol in [`THEORY_EVALUATION_PROTOCOL.md`](THEORY_EVALUATION_PROTOCOL.md).
 | affine Boolean predicates can have zero Toffoli cost under ANF | proved from degree-at-most-one monomials | parity regression and scaling reports | ready under the stated decomposition convention |
 | the finite verifier gives the declared phase sign through kickback | follows from clean one-bit XOR semantics | phase tests and Grover simulation using either exact backend | ready for the finite baseline |
 | the truth-table-derived compiler family is asymptotically efficient | false in the worst case | resource and scaling reports expose exponential term counts | must not be claimed |
+| an integer affine model can be compiled to a clean polynomial-size value or threshold oracle | proved for the declared two's-complement, no-overflow, shift-add and ripple-carry semantics | `ReversibleIntegerAffineValueOracle`, `ReversibleIntegerAffinePredicateOracle`, exhaustive adder/oracle tests and exact resource formulas | ready as the first structure-preserving compiler theorem |
+| a two-layer integer `Affine-ReLU-Affine/Threshold` network can be compiled to a clean predicate and phase oracle | proved by clean suboracle composition, exact sign-controlled ReLU, and Bennett uncomputation | `ReversibleIntegerMLPPredicateOracle`, exhaustive candidate/target/inverse tests, Grover phase regression and exact composed gate counts | ready as a non-linear compiler theorem under the stated integer/two-layer scope |
+| the current structure compiler supports arbitrary fixed-point requantization or arbitrary-depth networks | false | adapters explicitly reject fractional scaling and unsupported architecture contracts | must not be claimed |
 | the present VQC prior gives quantum query advantage | not established | no supporting oracle experiment | must not be claimed |
-| a structure-preserving compiled neural verifier preserves query advantage end to end | open | two exact finite baselines exist; arithmetic compiler pending | requires arithmetic correctness, symbolic resources, precision, and break-even theorems |
+| a structure-preserving compiled neural verifier preserves query advantage end to end | open | clean integer Affine and two-layer ReLU MLP compilers plus cost planner now exist; no matched reconstruction-scale advantage region yet | requires fixed task, candidate prior, strongest classical baseline, precision, state preparation and measured break-even evidence |
 | batch-one biased first-layer Linear gradients reveal the raw input | proved under explicit leakage assumptions | analytic implementation and real-data verification | usable only with the stated assumptions |
 
 ## Target-equivalence Bayes theorem
@@ -75,8 +82,31 @@ U_f|x\rangle|y\rangle|0^a\rangle
 =|x\rangle|y\oplus f(x)\rangle|0^a\rangle.
 \]
 
-The two backends are exhaustive cross-checks and resource upper bounds. Neither
-provides a polynomial worst-case neural-network compiler.
+The two finite backends are exhaustive cross-checks and resource upper bounds.
+Neither provides a polynomial worst-case neural-network compiler.
+
+## Structure-preserving compiler theorems
+
+The integer Affine backend computes constant products by sign/zero extension and
+shift-add, accumulates them with clean ripple-carry addition, copies the result,
+and reverses every arithmetic operation. Under its explicit no-overflow proof,
+the modular bit circuit equals the mathematical integer affine map on the full
+input-word domain.
+
+The two-layer MLP backend composes a clean first Affine value oracle, a reversible
+componentwise ReLU copy, and a clean final Affine-threshold oracle. It then
+reverses ReLU and the first Affine oracle. For hidden width `w>1` and `h` hidden
+neurons, ReLU compute/uncompute contributes exactly `4h` X gates and
+`2h(w-1)` Toffolis. If the first Affine call has counts `(X1,C1,T1)` and the
+final predicate `(X2,C2,T2)`, the complete clean MLP has
+
+\[
+X=2X_1+X_2+4h,\quad C=2C_1+C_2,\quad T=2T_1+T_2+2h(w-1).
+\]
+
+These results establish polynomial-size coherent access for the declared integer
+architectures. They do not establish that the resulting fault-tolerant cost is
+lower than classical reconstruction.
 
 ## Acceptance gate for an end-to-end advantage claim
 
@@ -90,5 +120,7 @@ All conditions below must hold simultaneously:
 6. compiler, state preparation, inverse calls, shots, measurement, and readout are counted;
 7. the classical baseline uses the same verifier, target success, and cost unit;
 8. the measured parameter region satisfies the strict break-even inequality;
-9. the structure-preserving arithmetic compiler beats both exponential finite baselines on the reported scaling regime;
-10. any original-sample recovery claim is below the applicable Bayes ceiling and respects all collision theorems.
+9. the structure-preserving compiler beats both exponential finite baselines on the reported scaling regime;
+10. the verifier represents an actual reconstruction observation/objective rather than only a toy classifier output;
+11. any original-sample recovery claim is below the applicable Bayes ceiling and respects all collision theorems;
+12. all theorem assumptions, failure cases, random seeds, intervals and resource-conversion assumptions are released.
