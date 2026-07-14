@@ -22,6 +22,7 @@
 ## 文档
 
 - [形式化理论基础、定理与证明](docs/THEORY_FOUNDATIONS.md)
+- [理论主张矩阵与端到端优势准入条件](docs/THEORY_CLAIM_MATRIX.md)
 - [相干预言机编译器规范](docs/COHERENT_ORACLE_SPEC.md)
 - [理论到实验的评估协议](docs/THEORY_EVALUATION_PROTOCOL.md)
 - [研究创新与论文路线](docs/RESEARCH_INNOVATION.md)
@@ -42,6 +43,7 @@
 - 直接、经典生成和变分量子三类重构先验；
 - 基于完整梯度 Jacobian 秩的局部可识别性分析；
 - 确定性 fibre 与噪声观测通道的 Bayes 最优恢复上界；
+- 面向声明等价关系的 Bayes 最优恢复上界；
 - 数据处理不等式、条件 min-entropy 与二元 Helstrom 界的可执行实现；
 - 经典无放回搜索与标准 Grover 成功率/查询数模型；
 - 端到端成本 break-even 与近似预言机误差界；
@@ -81,7 +83,7 @@ qrecon --config configs/image_community_forensics_lenet_lbfgs.yaml
 
 ## 当前状态
 
-项目已形成可运行的第一阶段研究原型，并建立了信息论恢复界、局部可识别性、理想查询复杂度、近似预言机误差和端到端成本的形式化基础。当前量子执行模块仍是潜空间 VQC 重构先验，不等价于相干受害模型预言机，因此不宣称端到端量子优势。
+项目已形成可运行的第一阶段研究原型，并建立了信息论恢复界、目标等价类恢复、局部可识别性、理想查询复杂度、近似预言机误差和端到端成本的形式化基础。当前量子执行模块仍是潜空间 VQC 重构先验，不等价于相干受害模型预言机，因此不宣称端到端量子优势。
 
 下一核心里程碑是按照编译器规范完成量化 Logistic Regression/MLP 的干净 value oracle、verifier 和 phase oracle，并用穷举真值表验证正确性，同时报告逻辑量子位、ancilla、Toffoli/T-count、深度、精度误差、查询次数、编码和读出成本。
 
