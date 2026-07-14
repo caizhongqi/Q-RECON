@@ -32,6 +32,14 @@ from .compiler import (
     compile_model_value_oracle,
     compile_verifier_oracle,
 )
+from .construction_audit import (
+    OracleConstructionAudit,
+    PreimageIndex,
+    audit_anf_oracle,
+    audit_structure_preserving_oracle,
+    audit_truth_table_oracle,
+    build_truth_table_preimage_index,
+)
 from .costing import (
     ClassicalSearchCosts,
     EndToEndSearchCostReport,
@@ -56,6 +64,11 @@ from .fixed_point import (
     rescale_code,
     round_half_away_from_zero,
     round_shift_right,
+)
+from .fixed_point_affine import (
+    FixedPointAffineLayout,
+    ReversibleFixedPointAffineValueOracle,
+    compile_structure_preserving_fixed_point_affine_oracle,
 )
 from .gradient_arithmetic import (
     GradientArithmeticRangeReport,
@@ -96,6 +109,13 @@ from .models import (
     QuantizedNetwork,
     quantized_binary_logistic_regression,
 )
+from .requantization import (
+    RequantizationLayout,
+    RequantizationRangeReport,
+    ReversibleFixedPointRequantizationOracle,
+    append_controlled_increment,
+    append_controlled_twos_complement,
+)
 from .reversible import (
     ReversibleCircuit,
     ReversibleGate,
@@ -118,6 +138,7 @@ __all__ = [
     "EndToEndSearchCostReport",
     "FaultTolerantGateCosts",
     "FiniteIdentifiabilityReport",
+    "FixedPointAffineLayout",
     "FixedPointFormat",
     "GradientArithmeticRangeReport",
     "GradientEqualityLayout",
@@ -132,14 +153,20 @@ __all__ = [
     "MintermGate",
     "MonomialGate",
     "NetworkRangeReport",
+    "OracleConstructionAudit",
     "OracleResourceEstimate",
+    "PreimageIndex",
     "QuantumSearchCosts",
     "QuantumSearchPlan",
     "QuantizedAffineLayer",
     "QuantizedNetwork",
+    "RequantizationLayout",
+    "RequantizationRangeReport",
     "ReversibleBatchGradientEqualityOracle",
     "ReversibleBatchGradientValueOracle",
     "ReversibleCircuit",
+    "ReversibleFixedPointAffineValueOracle",
+    "ReversibleFixedPointRequantizationOracle",
     "ReversibleGate",
     "ReversibleIntegerAffineEqualityOracle",
     "ReversibleIntegerAffinePredicateOracle",
@@ -155,15 +182,22 @@ __all__ = [
     "affine_range_report",
     "analyze_finite_oracle",
     "append_cdkm_fixed_adder",
+    "append_controlled_increment",
+    "append_controlled_twos_complement",
     "append_equality_to_constant",
     "append_signed_modular_product",
     "append_signed_relu_copy",
+    "audit_anf_oracle",
+    "audit_structure_preserving_oracle",
+    "audit_truth_table_oracle",
+    "build_truth_table_preimage_index",
     "compare_end_to_end_search_costs",
     "compare_exact_syntheses",
     "compile_model_value_oracle",
     "compile_structure_preserving_affine_equality_oracle",
     "compile_structure_preserving_affine_oracle",
     "compile_structure_preserving_deep_mlp_threshold_oracle",
+    "compile_structure_preserving_fixed_point_affine_oracle",
     "compile_structure_preserving_gradient_value_oracle",
     "compile_structure_preserving_mlp_threshold_oracle",
     "compile_structure_preserving_threshold_oracle",
