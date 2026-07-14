@@ -2,8 +2,10 @@
 
 from .bounds import (
     all_pairs_epsilon_private_uniform_bound,
+    bayes_equivalence_reconstruction_success,
     bayes_reconstruction_success,
     binary_helstrom_success,
+    channel_bayes_equivalence_reconstruction_success,
     channel_bayes_reconstruction_success,
     conditional_min_entropy_bits,
     observation_fibres,
@@ -34,8 +36,10 @@ __all__ = [
     "CostComparison",
     "SearchComparison",
     "all_pairs_epsilon_private_uniform_bound",
+    "bayes_equivalence_reconstruction_success",
     "bayes_reconstruction_success",
     "binary_helstrom_success",
+    "channel_bayes_equivalence_reconstruction_success",
     "channel_bayes_reconstruction_success",
     "classical_queries_for_success",
     "classical_success_without_replacement",
