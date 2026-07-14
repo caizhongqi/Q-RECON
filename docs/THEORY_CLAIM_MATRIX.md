@@ -1,6 +1,6 @@
 # Q-RECON Theory Claim Matrix
 
-This file is intentionally concise. The complete proofs and assumptions live in
+The complete access-model, information, query, and cost arguments live in
 [`THEORY_FOUNDATIONS.md`](THEORY_FOUNDATIONS.md), the coherent compiler contract
 in [`COHERENT_ORACLE_SPEC.md`](COHERENT_ORACLE_SPEC.md), and the empirical
 protocol in [`THEORY_EVALUATION_PROTOCOL.md`](THEORY_EVALUATION_PROTOCOL.md).
@@ -18,6 +18,27 @@ protocol in [`THEORY_EVALUATION_PROTOCOL.md`](THEORY_EVALUATION_PROTOCOL.md).
 | the present VQC prior gives quantum query advantage | not established | no supporting oracle experiment | must not be claimed |
 | a compiled neural verifier preserves query advantage end to end | open | compiler specification only | requires correctness, resource, precision, and cost theorems |
 | batch-one biased first-layer Linear gradients reveal the raw input | proved under explicit leakage assumptions | analytic implementation and real-data verification | usable only with the stated assumptions |
+
+## Target-equivalence Bayes theorem
+
+Let `c(x)` denote the declared acceptable target class of candidate `x`. For a
+finite prior `pi(x)` and noisy observation channel `W(y|x)`, the best possible
+success probability for returning any candidate in the correct target class is
+
+\[
+P^*_{\mathrm{class}}(X\mid Y)
+=\sum_y\max_a\sum_{x:c(x)=a}\pi(x)W(y\mid x).
+\]
+
+For each observed `y`, any decision rule must choose one class `a`. Its joint
+correct mass is the inner class sum, so choosing the largest class posterior is
+optimal independently for every `y`; summing over observations proves the
+formula. The deterministic result follows by setting
+`W(y|x)=1[g(x)=y]`.
+
+This theorem is the correct formal target for datasets with permutation,
+isomorphism, tokenization, or application-defined equivalences. Exact-candidate
+success and class success must be reported separately.
 
 ## Acceptance gate for an end-to-end advantage claim
 
