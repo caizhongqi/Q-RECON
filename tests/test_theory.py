@@ -15,6 +15,7 @@ from qrecon.theory import (
     grover_success,
     maximum_quantum_query_cost_for_advantage,
     minimum_instances_for_quantum_advantage,
+    optimal_standard_grover_iterations,
     oracle_error_success_lower_bound,
     postprocess_channel,
     uniform_fibre_success,
@@ -67,6 +68,7 @@ def test_classical_and_grover_exact_small_case():
     assert grover_success(4, 1, 1) == pytest.approx(1.0)
     assert grover_queries_for_success(4, 1, 0.99) == 1
     assert grover_queries_for_success(2, 1, 0.9) is None
+    assert optimal_standard_grover_iterations(5, 3) == 0
 
 
 def test_cost_break_even_and_oracle_error_bound():
