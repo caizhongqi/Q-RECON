@@ -1,10 +1,20 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from typing import Protocol
 
 import numpy as np
 
-from .compiler import OracleResourceEstimate, TruthTableOracle
+from .compiler import OracleResourceEstimate
+
+
+class PredicateOracle(Protocol):
+    input_bits: int
+    output_bits: int
+
+    def marked_inputs(self) -> tuple[int, ...]: ...
+
+    def resource_estimate(self, *, phase_kickback: bool = False) -> OracleResourceEstimate: ...
 
 
 @dataclass(frozen=True)
@@ -47,8 +57,8 @@ class GroverResourceEstimate:
         return result
 
 
-def simulate_grover(verifier: TruthTableOracle, iterations: int) -> GroverSimulationResult:
-    """Exact state-vector simulation using the compiled predicate truth table."""
+def simulate_grover(verifier: PredicateOracle, iterations: int) -> GroverSimulationResult:
+    """Exact state-vector simulation using a compiled one-bit predicate."""
 
     if verifier.output_bits != 1:
         raise ValueError("Grover simulation requires a one-bit verifier")
@@ -91,7 +101,7 @@ def _diffusion_resources(input_bits: int) -> tuple[int, int, int, int, int, int]
 
 
 def estimate_grover_resources(
-    verifier: TruthTableOracle, iterations: int
+    verifier: PredicateOracle, iterations: int
 ) -> GroverResourceEstimate:
     if verifier.output_bits != 1:
         raise ValueError("Grover resources require a one-bit verifier")
@@ -131,6 +141,6 @@ def estimate_grover_resources(
         assumptions=(
             "uniform state preparation; phase kickback through one clean verifier "
             "per iteration; standard H-X-MCZ-X-H diffusion; exact Toffoli cost "
-            "upper bounds inherited from the truth-table synthesis contract"
+            "upper bounds inherited from the selected exact synthesis contract"
         ),
     )
