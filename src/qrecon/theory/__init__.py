@@ -1,5 +1,13 @@
-"""Executable information and query-complexity bounds for Q-RECON."""
+"""Executable information, collision, query, and cost bounds for Q-RECON."""
 
+from .batch_collisions import (
+    BatchCollisionReport,
+    LinearBatchGradientObservation,
+    construct_linear_batch_collision,
+    linear_squared_loss_gradients,
+    symmetric_pair_mixing,
+    validate_batch_mixing_matrix,
+)
 from .bounds import (
     all_pairs_epsilon_private_uniform_bound,
     bayes_equivalence_reconstruction_success,
@@ -33,7 +41,9 @@ from .search import (
 
 __all__ = [
     "AlgorithmCost",
+    "BatchCollisionReport",
     "CostComparison",
+    "LinearBatchGradientObservation",
     "SearchComparison",
     "all_pairs_epsilon_private_uniform_bound",
     "bayes_equivalence_reconstruction_success",
@@ -46,14 +56,18 @@ __all__ = [
     "compare_algorithm_costs",
     "compare_search_queries",
     "conditional_min_entropy_bits",
+    "construct_linear_batch_collision",
     "expected_classical_queries",
     "grover_queries_for_success",
     "grover_success",
+    "linear_squared_loss_gradients",
     "maximum_quantum_query_cost_for_advantage",
     "minimum_instances_for_quantum_advantage",
     "observation_fibres",
     "optimal_standard_grover_iterations",
     "oracle_error_success_lower_bound",
     "postprocess_channel",
+    "symmetric_pair_mixing",
     "uniform_fibre_success",
+    "validate_batch_mixing_matrix",
 ]
