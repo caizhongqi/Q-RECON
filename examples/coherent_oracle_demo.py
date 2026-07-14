@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 
 from qrecon.oracles import (
+    ANFOracle,
     FixedPointFormat,
     QuantizedAffineLayer,
     QuantizedNetwork,
     analyze_finite_oracle,
+    compare_exact_syntheses,
     compile_model_value_oracle,
     compile_verifier_oracle,
     estimate_grover_resources,
@@ -33,9 +35,12 @@ def main() -> None:
     target_input = model.encode_input_codes((1, -2))
     target_output = model.evaluate_input_word(target_input)
     verifier = compile_verifier_oracle(value_oracle, target_output, metric="exact")
-    marked = len(verifier.marked_inputs())
+    anf_verifier = ANFOracle.from_truth_table(verifier)
+    synthesis = compare_exact_syntheses(verifier)
+    selected_verifier = anf_verifier if synthesis.selected == "anf" else verifier
+    marked = len(selected_verifier.marked_inputs())
     iterations = optimal_standard_grover_iterations(len(verifier.table), marked) or 0
-    simulation = simulate_grover(verifier, iterations)
+    simulation = simulate_grover(selected_verifier, iterations)
 
     report = {
         "model": {
@@ -54,7 +59,9 @@ def main() -> None:
             "target_input": target_input,
             "target_output": target_output,
             "marked_candidates": marked,
-            "resources": verifier.resource_estimate(phase_kickback=True).to_dict(),
+            "selected_synthesis": synthesis.selected,
+            "minterm_resources": synthesis.minterm.to_dict(),
+            "anf_resources": synthesis.anf.to_dict(),
         },
         "query_comparison": compare_search_queries(
             len(verifier.table), marked, target_success=0.8
@@ -63,7 +70,9 @@ def main() -> None:
             "iterations": iterations,
             "success_probability": simulation.success_probability,
             "most_likely_inputs": simulation.most_likely_inputs,
-            "resources": estimate_grover_resources(verifier, iterations).to_dict(),
+            "resources": estimate_grover_resources(
+                selected_verifier, iterations
+            ).to_dict(),
         },
     }
     print(json.dumps(report, indent=2, sort_keys=True))
