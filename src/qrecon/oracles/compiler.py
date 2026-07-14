@@ -24,6 +24,13 @@ class MintermGate:
     def matches(self, input_word: int) -> bool:
         return int(input_word) == self.required_input
 
+    def apply(self, input_word: int, output_word: int) -> int:
+        """Apply this self-inverse logical gate to a basis output word."""
+
+        if self.matches(input_word):
+            return int(output_word) ^ (1 << self.target_output_bit)
+        return int(output_word)
+
 
 @dataclass(frozen=True)
 class OracleResourceEstimate:
@@ -126,12 +133,24 @@ class TruthTableOracle:
             raise ValueError("output_word is outside the output register")
         if ancillas != 0:
             raise ValueError("clean oracle requires ancillas initialized to zero")
-        return input_value, output_value ^ self.table[input_value], 0
+        for gate in self.gates:
+            output_value = gate.apply(input_value, output_value)
+        return input_value, output_value, 0
 
     def inverse_apply(
         self, input_word: int, output_word: int = 0, ancillas: int = 0
     ) -> tuple[int, int, int]:
-        return self.apply(input_word, output_word, ancillas)
+        input_value = int(input_word)
+        output_value = int(output_word)
+        if input_value < 0 or input_value >= (1 << self.input_bits):
+            raise ValueError("input_word is outside the input register")
+        if output_value < 0 or output_value >= (1 << self.output_bits):
+            raise ValueError("output_word is outside the output register")
+        if ancillas != 0:
+            raise ValueError("clean oracle requires ancillas initialized to zero")
+        for gate in reversed(self.gates):
+            output_value = gate.apply(input_value, output_value)
+        return input_value, output_value, 0
 
     def verify_basis_permutation(self, *, exhaustive_output_words: bool = True) -> bool:
         output_words = range(1 << self.output_bits) if exhaustive_output_words else (0,)
