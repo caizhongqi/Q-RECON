@@ -23,8 +23,8 @@ def _normalized_prior(prior: ProbabilityMap) -> dict[Hashable, float]:
             raise ValueError("prior probabilities must be finite and non-negative")
         normalized[candidate] = value
         total += value
-    if total <= 0.0:
-        raise ValueError("prior must have positive total mass")
+    if not math.isfinite(total) or total <= 0.0:
+        raise ValueError("prior must have positive finite total mass")
     return {candidate: probability / total for candidate, probability in normalized.items()}
 
 
@@ -89,7 +89,37 @@ def bayes_reconstruction_success(
     for candidate, probability in normalized.items():
         value = observation[candidate]
         best_mass[value] = max(best_mass.get(value, 0.0), probability)
-    return float(sum(best_mass.values()))
+    return min(1.0, float(sum(best_mass.values())))
+
+
+def bayes_equivalence_reconstruction_success(
+    prior: ProbabilityMap,
+    observation: DeterministicObservation,
+    target_class: Mapping[Hashable, Hashable],
+) -> float:
+    """Bayes-optimal success modulo a caller-declared target equivalence.
+
+    ``target_class[x]`` identifies the acceptable equivalence class of candidate
+    ``x``. For every observation fibre, the optimal decision chooses the class
+    with the largest total prior mass, not necessarily its most likely member.
+    """
+
+    normalized = _normalized_prior(prior)
+    missing_observations = set(normalized).difference(observation)
+    missing_classes = set(normalized).difference(target_class)
+    if missing_observations:
+        raise KeyError(
+            f"observation is missing candidates: {sorted(map(str, missing_observations))}"
+        )
+    if missing_classes:
+        raise KeyError(
+            f"target_class is missing candidates: {sorted(map(str, missing_classes))}"
+        )
+
+    mass: dict[Hashable, dict[Hashable, float]] = defaultdict(lambda: defaultdict(float))
+    for candidate, probability in normalized.items():
+        mass[observation[candidate]][target_class[candidate]] += probability
+    return min(1.0, float(sum(max(class_mass.values()) for class_mass in mass.values())))
 
 
 def uniform_fibre_success(observation: DeterministicObservation) -> float:
@@ -122,7 +152,37 @@ def channel_bayes_reconstruction_success(
             normalized[candidate] * validated[candidate].get(observation, 0.0)
             for candidate in normalized
         )
-    return float(success)
+    return min(1.0, float(success))
+
+
+def channel_bayes_equivalence_reconstruction_success(
+    prior: ProbabilityMap,
+    channel: ObservationChannel,
+    target_class: Mapping[Hashable, Hashable],
+) -> float:
+    """Bayes-optimal noisy-channel success modulo target equivalence classes."""
+
+    normalized = _normalized_prior(prior)
+    missing_classes = set(normalized).difference(target_class)
+    if missing_classes:
+        raise KeyError(
+            f"target_class is missing candidates: {sorted(map(str, missing_classes))}"
+        )
+    validated = _validated_channel(set(normalized), channel)
+    observations = {
+        observation
+        for candidate in normalized
+        for observation in validated[candidate]
+    }
+    success = 0.0
+    for observation in observations:
+        class_mass: dict[Hashable, float] = defaultdict(float)
+        for candidate, probability in normalized.items():
+            class_mass[target_class[candidate]] += (
+                probability * validated[candidate].get(observation, 0.0)
+            )
+        success += max(class_mass.values())
+    return min(1.0, float(success))
 
 
 def postprocess_channel(
@@ -183,6 +243,8 @@ def binary_helstrom_success(
         raise ValueError("rho0 and rho1 must be square matrices of equal shape")
 
     for name, matrix in (("rho0", left), ("rho1", right)):
+        if not np.isfinite(matrix).all():
+            raise ValueError(f"{name} must contain only finite values")
         if not np.allclose(matrix, matrix.conj().T, atol=atol, rtol=0.0):
             raise ValueError(f"{name} must be Hermitian")
         if not np.isclose(np.trace(matrix), 1.0, atol=atol, rtol=0.0):
