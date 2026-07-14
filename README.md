@@ -27,6 +27,9 @@
 - [相干预言机编译器规范](docs/COHERENT_ORACLE_SPEC.md)
 - [精确 truth-table 相干预言机基线](docs/TRUTH_TABLE_ORACLE_BASELINE.md)
 - [ANF 精确预言机综合优化](docs/ANF_ORACLE_OPTIMIZATION.md)
+- [保持结构的可逆 Affine 编译器](docs/STRUCTURE_PRESERVING_AFFINE_ORACLE.md)
+- [保持结构的可逆两层 MLP/ReLU 编译器](docs/REVERSIBLE_MLP_ORACLE.md)
+- [端到端成本比较协议](docs/END_TO_END_COST_PROTOCOL.md)
 - [理论到实验的评估协议](docs/THEORY_EVALUATION_PROTOCOL.md)
 - [研究创新与论文路线](docs/RESEARCH_INNOVATION.md)
 - [数据集与下载方式](docs/DATASETS.md)
@@ -50,16 +53,19 @@
 - 数据处理不等式、条件 min-entropy 与二元 Helstrom 界的可执行实现；
 - batch size ≥ 2 的带偏置线性回归聚合梯度连续碰撞构造；
 - 经典无放回搜索与标准 Grover 成功率/查询数模型；
-- 端到端成本 break-even 与近似预言机误差界；
+- 端到端成本 break-even、量子搜索计划优化与近似预言机误差界；
 - 二进制定点、双补码、确定性舍入、显式溢出语义与逐层区间证明；
 - 量化 Logistic Regression/MLP 的 bit-exact 参考求值器；
 - 有限候选空间上的干净 truth-table value oracle、verifier 与 phase oracle；
 - GF(2) 代数标准形（ANF）精确 oracle 综合与资源感知后端选择；
-- 两种独立 gate-netlist 后端的逐输入等价、自逆、置换和 ancilla 清理验证；
+- 多项式规模的可逆整数 Affine value/threshold oracle：常数 shift-add、ripple-carry、copy 与严格反计算；
+- 可逆两层 `Affine → ReLU → Affine/Threshold` MLP 相位预言机；
+- ReLU 的双补码符号控制 Toffoli 实现及隐藏激活/预激活的 Bennett 清理；
+- truth-table、ANF、Affine 与 MLP 多后端的逐输入等价、自逆、置换和 ancilla 清理验证；
 - 有限空间全局 fibre、碰撞规模和 Bayes 恢复上限分析；
-- 由编译 predicate 驱动的 Grover 状态向量验证；
-- 可机读的 logical-qubit、ancilla、controlled-X、Toffoli、T-count、T-depth 与查询资源报告；
-- parity、all-zero equality 与 majority predicate 的综合扩展曲线；
+- 由真实编译 predicate gate netlist 驱动的 Grover 状态向量验证；
+- 可机读的 logical-qubit、ancilla、controlled-X、Toffoli、T-count、T-depth、查询和摊销成本报告；
+- parity、all-zero equality、majority、Affine 与 MLP predicate 的综合扩展曲线；
 - 重构质量与量子逻辑资源统计；
 - 多 Python 版本经典/理论 CI 和独立 PennyLane 前向反向 smoke test；
 - YAML 实验配置和单元测试。
@@ -82,6 +88,8 @@ pytest
 python examples/theory_bounds.py
 python examples/coherent_oracle_demo.py
 python examples/oracle_scaling.py
+python examples/affine_oracle_cost_report.py
+python examples/mlp_oracle_demo.py
 ```
 
 运行真实数据实验：
@@ -99,10 +107,10 @@ qrecon --config configs/image_community_forensics_lenet_lbfgs.yaml
 
 ## 当前状态
 
-项目已经建立信息论恢复界、目标等价类恢复、局部与有限空间全局可识别性、聚合梯度显式碰撞族、理想查询复杂度、近似预言机误差以及端到端成本的形式化基础。仓库现包含第一个可执行相干预言机里程碑：量化 Logistic Regression/MLP 的 bit-exact 参考语义能够被综合为干净 value oracle，并进一步生成 verifier、phase oracle、全局碰撞报告和 Grover 逻辑资源报告。
+项目已经建立信息论恢复界、目标等价类恢复、局部与有限空间全局可识别性、聚合梯度显式碰撞族、理想查询复杂度、近似预言机误差以及端到端摊销成本的形式化基础。
 
-当前有两条相互独立的精确综合路径：mixed-polarity minterm 基线和 GF(2) ANF 后端。它们均执行真实 gate netlist 而不是直接查表，并对所有小规模输入穷举验证。ANF 可在低代数次数 predicate 上显著降低非 Clifford 成本；自动选择器保留两套完整资源记录并选择更低成本后端。
+相干编译部分现有四条可交叉验证的路径：mixed-polarity minterm、GF(2) ANF、保持结构的整数 Affine，以及保持结构的两层 Affine-ReLU-Affine MLP。前两者提供有限空间的独立精确综合基线；后两者执行多项式规模的真实 X/CNOT/Toffoli gate netlist，并通过 compute-copy-uncompute 或 Bennett 反演将全部算术、预激活和激活工作寄存器恢复为零。小规模配置对所有候选、两个初始目标位、逆电路、phase sign、Grover 曲线和资源恒等式进行穷举验证。
 
-上述综合仍依赖有限真值表，最坏成本为指数级，因此不构成实用量子优势。当前 VQC 模块也仍只是潜空间重构先验。下一核心里程碑是实现保持模型结构的可逆定点算术编译器，包括 affine multiply-accumulate、requantization、ReLU/comparator、compute-copy-uncompute 和逐层符号资源界，并以 minterm 与 ANF 后端对小实例进行双重穷举等价验证。
+这已经建立了“量化参考语义 → 干净 value/predicate/phase oracle → Grover 执行 → 故障容错资源与端到端成本”的可执行闭环，但仍不等于实际量子优势。当前结构编译器只覆盖整数尺度、单层 Affine 与两层 ReLU MLP；VQC 仍只是潜空间重构先验。下一研究门槛是固定点 requantization、多隐藏层与寄存器活性复用，并把编译 verifier 接入真正的训练数据重构观测目标，在相同成功率和成本单位下与最强经典搜索/优化基线比较。
 
 在 batch size 1、完整梯度可见且首层带偏置 Linear 直接接收原始输入时，解析攻击已在真实 GIFT-Eval 与 Community Forensics 样本上实现 `within 1e-6 = 100%`；该结论不适用于任意 CNN、聚合梯度或受防御保护的训练过程。
