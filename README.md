@@ -14,9 +14,9 @@
 
 - 建立经典访问、白盒访问与相干量子访问三类威胁模型。
 - 给出训练数据不可识别时的经典/量子信息论上界。
-- 将量化经典神经网络自动编译为干净的可逆量子预言机。
+- 将量化经典神经网络和训练泄漏目标编译为干净的可逆量子预言机。
 - 在唯一可识别的结构化候选空间中设计量子重构算法。
-- 证明并测量预言机构造、近似误差和端到端成本下的优势边界。
+- 证明并测量预言机构造、近似误差和端到端成本下的优势或无优势边界。
 - 建立覆盖多种模型、数据模态和访问方式的统一基准。
 
 ## 文档
@@ -24,11 +24,13 @@
 - [形式化理论基础、定理与证明](docs/THEORY_FOUNDATIONS.md)
 - [理论主张矩阵与端到端优势准入条件](docs/THEORY_CLAIM_MATRIX.md)
 - [聚合梯度的批次不可识别性定理](docs/BATCH_GRADIENT_NONIDENTIFIABILITY.md)
+- [单样本完整训练梯度的可识别性与相干重构预言机](docs/GRADIENT_RECONSTRUCTION_ORACLE.md)
 - [相干预言机编译器规范](docs/COHERENT_ORACLE_SPEC.md)
 - [精确 truth-table 相干预言机基线](docs/TRUTH_TABLE_ORACLE_BASELINE.md)
 - [ANF 精确预言机综合优化](docs/ANF_ORACLE_OPTIMIZATION.md)
 - [保持结构的可逆 Affine 编译器](docs/STRUCTURE_PRESERVING_AFFINE_ORACLE.md)
 - [保持结构的可逆两层 MLP/ReLU 编译器](docs/REVERSIBLE_MLP_ORACLE.md)
+- [任意深度可逆 ReLU MLP 与共享工作区定理](docs/DEEP_REVERSIBLE_MLP_ORACLE.md)
 - [端到端成本比较协议](docs/END_TO_END_COST_PROTOCOL.md)
 - [理论到实验的评估协议](docs/THEORY_EVALUATION_PROTOCOL.md)
 - [研究创新与论文路线](docs/RESEARCH_INNOVATION.md)
@@ -52,6 +54,7 @@
 - 面向声明等价关系的 Bayes 最优恢复上界；
 - 数据处理不等式、条件 min-entropy 与二元 Helstrom 界的可执行实现；
 - batch size ≥ 2 的带偏置线性回归聚合梯度连续碰撞构造；
+- 单样本带偏置线性回归完整梯度的“非零残差可解析恢复／零残差不可识别”二分定理；
 - 经典无放回搜索与标准 Grover 成功率/查询数模型；
 - 端到端成本 break-even、量子搜索计划优化与近似预言机误差界；
 - 二进制定点、双补码、确定性舍入、显式溢出语义与逐层区间证明；
@@ -60,12 +63,15 @@
 - GF(2) 代数标准形（ANF）精确 oracle 综合与资源感知后端选择；
 - 多项式规模的可逆整数 Affine value/threshold oracle：常数 shift-add、ripple-carry、copy 与严格反计算；
 - 可逆两层 `Affine → ReLU → Affine/Threshold` MLP 相位预言机；
+- 任意隐藏层深度的整数 ReLU MLP 相位预言机；
+- 跨层共享算术工作区，峰值 ancilla 由最大单层工作量而非各层之和决定；
 - ReLU 的双补码符号控制 Toffoli 实现及隐藏激活/预激活的 Bennett 清理；
-- truth-table、ANF、Affine 与 MLP 多后端的逐输入等价、自逆、置换和 ancilla 清理验证；
+- 单样本训练梯度的保持结构算术预言机：可逆残差、可逆有符号变量乘法、全梯度输出和精确相等 verifier；
+- truth-table、ANF、Affine、MLP 与梯度算术多后端的逐输入等价、自逆、置换和 ancilla 清理验证；
 - 有限空间全局 fibre、碰撞规模和 Bayes 恢复上限分析；
 - 由真实编译 predicate gate netlist 驱动的 Grover 状态向量验证；
 - 可机读的 logical-qubit、ancilla、controlled-X、Toffoli、T-count、T-depth、查询和摊销成本报告；
-- parity、all-zero equality、majority、Affine 与 MLP predicate 的综合扩展曲线；
+- parity、all-zero equality、majority、Affine、MLP 与 gradient predicate 的综合扩展分析；
 - 重构质量与量子逻辑资源统计；
 - 多 Python 版本经典/理论 CI 和独立 PennyLane 前向反向 smoke test；
 - YAML 实验配置和单元测试。
@@ -90,6 +96,7 @@ python examples/coherent_oracle_demo.py
 python examples/oracle_scaling.py
 python examples/affine_oracle_cost_report.py
 python examples/mlp_oracle_demo.py
+python examples/gradient_reconstruction_demo.py
 ```
 
 运行真实数据实验：
@@ -109,8 +116,10 @@ qrecon --config configs/image_community_forensics_lenet_lbfgs.yaml
 
 项目已经建立信息论恢复界、目标等价类恢复、局部与有限空间全局可识别性、聚合梯度显式碰撞族、理想查询复杂度、近似预言机误差以及端到端摊销成本的形式化基础。
 
-相干编译部分现有四条可交叉验证的路径：mixed-polarity minterm、GF(2) ANF、保持结构的整数 Affine，以及保持结构的两层 Affine-ReLU-Affine MLP。前两者提供有限空间的独立精确综合基线；后两者执行多项式规模的真实 X/CNOT/Toffoli gate netlist，并通过 compute-copy-uncompute 或 Bennett 反演将全部算术、预激活和激活工作寄存器恢复为零。小规模配置对所有候选、两个初始目标位、逆电路、phase sign、Grover 曲线和资源恒等式进行穷举验证。
+相干编译部分具备五类可交叉验证的路径：mixed-polarity minterm、GF(2) ANF、保持结构的整数 Affine、任意深度整数 ReLU MLP，以及单样本完整训练梯度算术 verifier。前两类提供有限空间的独立精确综合基线；后三类执行多项式规模的真实 X/CNOT/Toffoli gate netlist，并通过 compute-copy-uncompute、反向层清理和共享工作区复用将全部算术、预激活、激活、残差及乘法工作寄存器恢复为零。小规模配置对所有候选、两个初始目标位、逆电路、phase sign、Grover 曲线、碰撞 fibre 和资源恒等式进行穷举验证。
 
-这已经建立了“量化参考语义 → 干净 value/predicate/phase oracle → Grover 执行 → 故障容错资源与端到端成本”的可执行闭环，但仍不等于实际量子优势。当前结构编译器只覆盖整数尺度、单层 Affine 与两层 ReLU MLP；VQC 仍只是潜空间重构先验。下一研究门槛是固定点 requantization、多隐藏层与寄存器活性复用，并把编译 verifier 接入真正的训练数据重构观测目标，在相同成功率和成本单位下与最强经典搜索/优化基线比较。
+训练梯度任务已经形成“泄漏定义 → 全局 fibre/Bayes 上限 → 解析恢复或不可识别定理 → 干净 gradient value/equality/phase oracle → Grover 执行 → 故障容错资源核算”的完整闭环。该闭环也给出明确负结论：单样本完整带偏置线性梯度在可识别时已有线性时间经典解析解，在零残差时又不可识别，因此不能被用来宣称量子优势。
+
+项目仍不宣称已经获得实际端到端量子优势。最关键的下一门槛是把固定点 requantization、部分或聚合的非线性网络泄漏、真实结构化候选先验和最强经典求解器纳入同一成功率与成本口径，并找到严格非空的优势区域。当前 VQC 仍只是潜空间重构先验，不是上述相干训练泄漏预言机。
 
 在 batch size 1、完整梯度可见且首层带偏置 Linear 直接接收原始输入时，解析攻击已在真实 GIFT-Eval 与 Community Forensics 样本上实现 `within 1e-6 = 100%`；该结论不适用于任意 CNN、聚合梯度或受防御保护的训练过程。
