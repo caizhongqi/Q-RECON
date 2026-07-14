@@ -23,8 +23,10 @@
 
 - [形式化理论基础、定理与证明](docs/THEORY_FOUNDATIONS.md)
 - [理论主张矩阵与端到端优势准入条件](docs/THEORY_CLAIM_MATRIX.md)
+- [聚合梯度的批次不可识别性定理](docs/BATCH_GRADIENT_NONIDENTIFIABILITY.md)
 - [相干预言机编译器规范](docs/COHERENT_ORACLE_SPEC.md)
 - [精确 truth-table 相干预言机基线](docs/TRUTH_TABLE_ORACLE_BASELINE.md)
+- [ANF 精确预言机综合优化](docs/ANF_ORACLE_OPTIMIZATION.md)
 - [理论到实验的评估协议](docs/THEORY_EVALUATION_PROTOCOL.md)
 - [研究创新与论文路线](docs/RESEARCH_INNOVATION.md)
 - [数据集与下载方式](docs/DATASETS.md)
@@ -46,16 +48,20 @@
 - 确定性 fibre 与噪声观测通道的 Bayes 最优恢复上界；
 - 面向声明等价关系的 Bayes 最优恢复上界；
 - 数据处理不等式、条件 min-entropy 与二元 Helstrom 界的可执行实现；
+- batch size ≥ 2 的带偏置线性回归聚合梯度连续碰撞构造；
 - 经典无放回搜索与标准 Grover 成功率/查询数模型；
 - 端到端成本 break-even 与近似预言机误差界；
 - 二进制定点、双补码、确定性舍入、显式溢出语义与逐层区间证明；
 - 量化 Logistic Regression/MLP 的 bit-exact 参考求值器；
 - 有限候选空间上的干净 truth-table value oracle、verifier 与 phase oracle；
-- oracle 自逆/置换/ancilla 清理的穷举验证；
+- GF(2) 代数标准形（ANF）精确 oracle 综合与资源感知后端选择；
+- 两种独立 gate-netlist 后端的逐输入等价、自逆、置换和 ancilla 清理验证；
 - 有限空间全局 fibre、碰撞规模和 Bayes 恢复上限分析；
 - 由编译 predicate 驱动的 Grover 状态向量验证；
-- 可机读的 logical-qubit、ancilla、Toffoli、T-count、T-depth 与查询资源报告；
+- 可机读的 logical-qubit、ancilla、controlled-X、Toffoli、T-count、T-depth 与查询资源报告；
+- parity、all-zero equality 与 majority predicate 的综合扩展曲线；
 - 重构质量与量子逻辑资源统计；
+- 多 Python 版本经典/理论 CI 和独立 PennyLane 前向反向 smoke test；
 - YAML 实验配置和单元测试。
 
 ## 安装
@@ -75,6 +81,7 @@ qrecon --config configs/smoke.yaml
 pytest
 python examples/theory_bounds.py
 python examples/coherent_oracle_demo.py
+python examples/oracle_scaling.py
 ```
 
 运行真实数据实验：
@@ -92,8 +99,10 @@ qrecon --config configs/image_community_forensics_lenet_lbfgs.yaml
 
 ## 当前状态
 
-项目已经建立信息论恢复界、目标等价类恢复、局部与有限空间全局可识别性、理想查询复杂度、近似预言机误差以及端到端成本的形式化基础。仓库现包含第一个可执行相干预言机里程碑：量化 Logistic Regression/MLP 的 bit-exact 参考语义能够被枚举为干净 value oracle，并进一步生成 verifier、phase oracle、全局碰撞报告和 Grover 逻辑资源报告。
+项目已经建立信息论恢复界、目标等价类恢复、局部与有限空间全局可识别性、聚合梯度显式碰撞族、理想查询复杂度、近似预言机误差以及端到端成本的形式化基础。仓库现包含第一个可执行相干预言机里程碑：量化 Logistic Regression/MLP 的 bit-exact 参考语义能够被综合为干净 value oracle，并进一步生成 verifier、phase oracle、全局碰撞报告和 Grover 逻辑资源报告。
 
-当前 truth-table 编译器是正确性优先的指数级基线，不构成实用量子优势。当前 VQC 模块仍只是潜空间重构先验，也不等价于相干受害模型预言机。下一核心里程碑是实现保持模型结构的可逆定点算术编译器，包括 affine multiply-accumulate、requantization、ReLU/comparator、compute-copy-uncompute 和逐层符号资源界，并以 truth-table 基线对小实例进行穷举等价验证。
+当前有两条相互独立的精确综合路径：mixed-polarity minterm 基线和 GF(2) ANF 后端。它们均执行真实 gate netlist 而不是直接查表，并对所有小规模输入穷举验证。ANF 可在低代数次数 predicate 上显著降低非 Clifford 成本；自动选择器保留两套完整资源记录并选择更低成本后端。
+
+上述综合仍依赖有限真值表，最坏成本为指数级，因此不构成实用量子优势。当前 VQC 模块也仍只是潜空间重构先验。下一核心里程碑是实现保持模型结构的可逆定点算术编译器，包括 affine multiply-accumulate、requantization、ReLU/comparator、compute-copy-uncompute 和逐层符号资源界，并以 minterm 与 ANF 后端对小实例进行双重穷举等价验证。
 
 在 batch size 1、完整梯度可见且首层带偏置 Linear 直接接收原始输入时，解析攻击已在真实 GIFT-Eval 与 Community Forensics 样本上实现 `within 1e-6 = 100%`；该结论不适用于任意 CNN、聚合梯度或受防御保护的训练过程。
