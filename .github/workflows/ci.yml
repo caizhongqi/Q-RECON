@@ -26,6 +26,7 @@ jobs:
         run: |
           python examples/theory_bounds.py > theory-bounds-${{ matrix.python-version }}.txt
           python examples/coherent_oracle_demo.py > coherent-oracle-${{ matrix.python-version }}.json
+          python examples/oracle_scaling.py > oracle-scaling-${{ matrix.python-version }}.json
       - name: Compile Python sources
         if: always()
         run: python -m compileall -q src tests examples
@@ -38,6 +39,7 @@ jobs:
             pytest-results-${{ matrix.python-version }}.xml
             theory-bounds-${{ matrix.python-version }}.txt
             coherent-oracle-${{ matrix.python-version }}.json
+            oracle-scaling-${{ matrix.python-version }}.json
           if-no-files-found: warn
 
   quantum-smoke:
