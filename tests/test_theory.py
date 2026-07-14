@@ -4,8 +4,10 @@ import pytest
 from qrecon.theory import (
     AlgorithmCost,
     all_pairs_epsilon_private_uniform_bound,
+    bayes_equivalence_reconstruction_success,
     bayes_reconstruction_success,
     binary_helstrom_success,
+    channel_bayes_equivalence_reconstruction_success,
     channel_bayes_reconstruction_success,
     classical_queries_for_success,
     classical_success_without_replacement,
@@ -29,6 +31,16 @@ def test_deterministic_fibre_bound_and_uniform_corollary():
     assert uniform_fibre_success(observation) == pytest.approx(2 / 3)
     assert conditional_min_entropy_bits(0.25) == pytest.approx(2.0)
 
+    collapsed_prior = {"a": 0.35, "b": 0.25, "c": 0.4}
+    collapsed_observation = {"a": "same", "b": "same", "c": "same"}
+    target_class = {"a": "equivalent", "b": "equivalent", "c": "other"}
+    assert bayes_reconstruction_success(
+        collapsed_prior, collapsed_observation
+    ) == pytest.approx(0.4)
+    assert bayes_equivalence_reconstruction_success(
+        collapsed_prior, collapsed_observation, target_class
+    ) == pytest.approx(0.6)
+
 
 def test_noisy_channel_formula_and_data_processing():
     prior = {0: 0.5, 1: 0.5}
@@ -45,6 +57,9 @@ def test_noisy_channel_formula_and_data_processing():
     }
     processed = postprocess_channel(channel, erase)
     assert channel_bayes_reconstruction_success(prior, processed) == pytest.approx(0.5)
+    assert channel_bayes_equivalence_reconstruction_success(
+        prior, processed, {0: "same", 1: "same"}
+    ) == pytest.approx(1.0)
 
 
 def test_helstrom_bound_for_identical_and_orthogonal_states():
