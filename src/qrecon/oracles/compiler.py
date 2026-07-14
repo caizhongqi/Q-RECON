@@ -38,7 +38,7 @@ class OracleResourceEstimate:
     output_qubits: int
     peak_clean_ancillas: int
     logical_qubits: int
-    minterm_gates: int
+    controlled_x_terms: int
     negative_control_x_gates: int
     x_gates: int
     cnot_gates: int
@@ -49,6 +49,12 @@ class OracleResourceEstimate:
     t_depth_upper_bound: int
     logical_depth_upper_bound: int
     synthesis: str
+
+    @property
+    def minterm_gates(self) -> int:
+        """Backward-compatible name for the number of emitted controlled-X terms."""
+
+        return self.controlled_x_terms
 
     def to_dict(self) -> dict[str, int | str]:
         return asdict(self)
@@ -209,7 +215,7 @@ class TruthTableOracle:
             output_qubits=output_qubits,
             peak_clean_ancillas=peak_ancillas,
             logical_qubits=logical_qubits,
-            minterm_gates=len(gates),
+            controlled_x_terms=len(gates),
             negative_control_x_gates=negative_x,
             x_gates=x_gates,
             cnot_gates=cnot_gates,
