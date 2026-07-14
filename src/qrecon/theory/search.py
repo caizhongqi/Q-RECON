@@ -79,9 +79,10 @@ def optimal_standard_grover_iterations(population: int, marked: int) -> int | No
     if marked == 0:
         return None
     theta = math.asin(math.sqrt(marked / population))
-    real_optimum = math.pi / (4.0 * theta) - 0.5
-    upper = max(0, math.ceil(real_optimum) + 1)
-    candidates = range(0, upper + 1)
+    real_optimum = max(0.0, math.pi / (4.0 * theta) - 0.5)
+    lower = max(0, math.floor(real_optimum))
+    upper = max(0, math.ceil(real_optimum))
+    candidates = {0, lower, upper}
     return max(candidates, key=lambda value: (grover_success(population, marked, value), -value))
 
 
