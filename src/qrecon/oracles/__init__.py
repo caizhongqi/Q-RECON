@@ -12,6 +12,13 @@ from .arithmetic import (
     compile_structure_preserving_affine_oracle,
     compile_structure_preserving_threshold_oracle,
 )
+from .batch_gradient import (
+    BatchGradientLayout,
+    BatchGradientRangeReport,
+    ReversibleBatchGradientEqualityOracle,
+    ReversibleBatchGradientValueOracle,
+    run_batch_gradient_reconstruction,
+)
 from .comparators import (
     AffineEqualityLayout,
     ReversibleIntegerAffineEqualityOracle,
@@ -101,6 +108,8 @@ __all__ = [
     "AffineEqualityLayout",
     "AffineRangeReport",
     "AffineRowRange",
+    "BatchGradientLayout",
+    "BatchGradientRangeReport",
     "ClassicalSearchCosts",
     "DeepMLPHiddenLayout",
     "DeepMLPLayout",
@@ -128,6 +137,8 @@ __all__ = [
     "QuantumSearchPlan",
     "QuantizedAffineLayer",
     "QuantizedNetwork",
+    "ReversibleBatchGradientEqualityOracle",
+    "ReversibleBatchGradientValueOracle",
     "ReversibleCircuit",
     "ReversibleGate",
     "ReversibleIntegerAffineEqualityOracle",
@@ -168,6 +179,7 @@ __all__ = [
     "rescale_code",
     "round_half_away_from_zero",
     "round_shift_right",
+    "run_batch_gradient_reconstruction",
     "run_single_record_gradient_reconstruction",
     "run_structure_preserving_gradient_reconstruction",
     "simulate_grover",
