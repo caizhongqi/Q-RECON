@@ -13,11 +13,12 @@ class IdentifiabilityReport:
     observation_dimension: int
     numerical_rank: int
     rank_ratio: float
+    full_column_rank: bool
     largest_singular_value: float
     smallest_identifiable_singular_value: float
     condition_number: float
 
-    def to_dict(self) -> dict[str, int | float]:
+    def to_dict(self) -> dict[str, int | float | bool]:
         return asdict(self)
 
 
@@ -28,10 +29,16 @@ def gradient_jacobian_report(
     task: str,
     tolerance: float = 1e-6,
 ) -> IdentifiabilityReport:
-    """Local identifiability of x from the full per-sample gradient.
+    """Local differential identifiability from the full per-sample gradient.
 
-    This is intentionally limited to small samples because the full Jacobian has
-    observation_dimension × input_dimension entries.
+    For a continuously differentiable observation map, full column rank is a
+    sufficient local-injectivity certificate: a nonsingular square row minor and
+    the inverse-function theorem provide a locally invertible output projection.
+    It is not a global uniqueness certificate, and rank deficiency alone does
+    not prove non-identifiability.
+
+    This calculation is intentionally limited to small samples because the full
+    Jacobian has ``observation_dimension × input_dimension`` entries.
     """
 
     parameters = tuple(model.parameters())
@@ -61,8 +68,8 @@ def gradient_jacobian_report(
         observation_dimension=matrix.shape[0],
         numerical_rank=rank,
         rank_ratio=rank / max(input_dimension, 1),
+        full_column_rank=rank == input_dimension,
         largest_singular_value=largest,
         smallest_identifiable_singular_value=smallest,
         condition_number=condition,
     )
-
