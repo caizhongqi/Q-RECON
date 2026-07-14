@@ -4,7 +4,9 @@ The complete access-model, information, query, and cost arguments live in
 [`THEORY_FOUNDATIONS.md`](THEORY_FOUNDATIONS.md), the aggregate-gradient collision
 proof in
 [`BATCH_GRADIENT_NONIDENTIFIABILITY.md`](BATCH_GRADIENT_NONIDENTIFIABILITY.md),
-the coherent compiler contract in
+the exact single-record gradient theorem and compiler in
+[`GRADIENT_RECONSTRUCTION_ORACLE.md`](GRADIENT_RECONSTRUCTION_ORACLE.md), the
+coherent compiler contract in
 [`COHERENT_ORACLE_SPEC.md`](COHERENT_ORACLE_SPEC.md), the exact finite compiler
 proofs in
 [`TRUTH_TABLE_ORACLE_BASELINE.md`](TRUTH_TABLE_ORACLE_BASELINE.md) and
@@ -27,6 +29,9 @@ empirical protocol in
 | finite truth-table enumeration gives global collision fibres | exact for the enumerated candidate space | `analyze_finite_oracle` | ready as a finite-space certificate; does not extrapolate beyond the enumerated domain |
 | biased linear-regression aggregate gradients identify the complete batch for `B>=2` | false when inputs and regression targets are both private | explicit `A 1 = 1` batch-mixing collision family and tests | non-identifiability theorem ready under its stated scope |
 | the same batch-mixing theorem automatically covers fixed labels, softmax, or arbitrary networks | not proved | no supporting construction | must not be claimed |
+| a full exact single-record biased-linear squared-loss gradient is uniquely invertible when its bias gradient is nonzero | proved by `x_i=(g_w)_i/g_b` and `t=w^T x+b-g_b` | analytic decoder, complete finite fibre enumeration and exhaustive tests | ready as a Q-RECON-specific identifiability theorem |
+| the zero-gradient single-record case identifies the original record | false whenever more than one representable `x` satisfies `t=w^T x+b` | explicit all-zero fibre enumeration | must not be claimed; the Bayes ceiling applies |
+| Grover gives meaningful advantage for full exact single-record biased-linear gradients | false under the declared arithmetic model | nonzero case has an `O(d)` classical analytic decoder; zero case is non-identifiable | negative no-advantage corollary ready |
 | identical released quantum states cannot be distinguished | standard Helstrom result | `binary_helstrom_success` | ready as an information bound |
 | a classical prediction API supplies coherent queries | false by access-model definition | access models documented | must not be claimed |
 | standard Grover search gives a black-box quadratic query reduction | standard result under clean Q-Access | exact success/query helpers and tests | usable only with explicit oracle assumptions |
@@ -39,9 +44,10 @@ empirical protocol in
 | an integer affine model can be compiled to a clean polynomial-size value or threshold oracle | proved for the declared two's-complement, no-overflow, shift-add and ripple-carry semantics | `ReversibleIntegerAffineValueOracle`, `ReversibleIntegerAffinePredicateOracle`, exhaustive adder/oracle tests and exact resource formulas | ready as the first structure-preserving compiler theorem |
 | a two-layer integer `Affine-ReLU-Affine/Threshold` network can be compiled to a clean predicate and phase oracle | proved by clean suboracle composition, exact sign-controlled ReLU, and Bennett uncomputation | `ReversibleIntegerMLPPredicateOracle`, exhaustive candidate/target/inverse tests, Grover phase regression and exact composed gate counts | ready as a non-linear compiler theorem under the stated integer/two-layer scope |
 | an arbitrary-depth integer ReLU MLP can be compiled with one shared arithmetic work region | proved by layerwise induction, reverse liveness cleanup, and maximum-work reuse | `ReversibleIntegerDeepMLPPredicateOracle`, exhaustive three-layer tests, exact maximum-versus-sum ancilla and gate-count identities | ready as the depth-generalization and qubit-liveness theorem under integer semantics |
+| an exact single-record linear-training gradient can be compiled as a polynomial-size clean value/equality/phase oracle | proved by affine residual computation, signed modular variable multiplication, full-gradient copy/equality, and reverse cleanup | `ReversibleSingleRecordGradientValueOracle`, `ReversibleSingleRecordGradientEqualityOracle`, exhaustive multiplier/value/verifier/Grover tests | ready as the first structure-preserving training-leakage compiler theorem |
 | the current structure compiler supports arbitrary fixed-point requantization | false | adapters explicitly reject fractional scaling | must not be claimed until a reversible rounding/shift compiler and error theorem exist |
 | the present VQC prior gives quantum query advantage | not established | no supporting oracle experiment | must not be claimed |
-| a structure-preserving compiled neural verifier preserves query advantage end to end | open | clean integer Affine, exact equality, two-layer and arbitrary-depth ReLU MLP compilers plus a cost planner now exist; no matched reconstruction-scale advantage region yet | requires fixed task, candidate prior, strongest classical baseline, precision, state preparation and measured break-even evidence |
+| a structure-preserving compiled neural verifier preserves query advantage end to end | open | clean integer Affine, equality, arbitrary-depth ReLU MLP, and exact-gradient compilers plus a cost planner now exist; the first real leakage benchmark is classically invertible or non-identifiable | requires a harder identifiable leakage, strongest classical baseline, precision, state preparation and measured break-even evidence |
 | batch-one biased first-layer Linear gradients reveal the raw input | proved under explicit leakage assumptions | analytic implementation and real-data verification | usable only with the stated assumptions |
 
 ## Target-equivalence Bayes theorem
@@ -127,9 +133,38 @@ T=2\sum_lT_l+T_f+2\sum_lh_l\max(0,w_l-1).
 \]
 
 The maximum-work term is achieved by reusing one clean arithmetic region after
-every layer. These results establish polynomial-size coherent access for the
-declared integer architectures. They do not establish that the resulting
-fault-tolerant cost is lower than classical reconstruction.
+every layer.
+
+For the single-record gradient channel, let `q` be the gradient-component width.
+A signed variable-product compute uses `3q^2+q` Toffolis and `4q^2` CNOTs; clean
+product copy and reverse therefore use `6q^2+2q` Toffolis and `8q^2+q` CNOTs per
+feature. A clean affine residual oracle is applied, the residual and all products
+are copied into the gradient output, and every operation is reversed. A full-word
+equality tree then yields the phase predicate for the released gradient.
+
+These results establish polynomial-size coherent access for the declared integer
+architectures and the first actual training-leakage map. They do not establish
+that the resulting fault-tolerant cost is lower than classical reconstruction.
+
+## Single-record gradient no-advantage theorem
+
+For exact squared-loss gradients of one biased linear record,
+
+\[
+g_w=(w^Tx+b-t)x,\qquad g_b=w^Tx+b-t.
+\]
+
+If `g_b != 0`, the exact decoder
+
+\[
+x_i=(g_w)_i/g_b,\qquad t=w^Tx+b-g_b
+\]
+
+recovers the candidate in linear time. If `g_b=0`, every representable
+`(x,t=w^Tx+b)` belongs to the all-zero observation fibre. Consequently this task
+is either classically trivial or information-theoretically ambiguous. The
+compiled Grover path is a coherent-circuit verification artifact, not an
+advantage claim.
 
 ## Acceptance gate for an end-to-end advantage claim
 
@@ -146,4 +181,5 @@ All conditions below must hold simultaneously:
 9. the structure-preserving compiler beats both exponential finite baselines on the reported scaling regime;
 10. the verifier represents an actual reconstruction observation/objective rather than only a toy classifier output;
 11. any original-sample recovery claim is below the applicable Bayes ceiling and respects all collision theorems;
-12. all theorem assumptions, failure cases, random seeds, intervals and resource-conversion assumptions are released.
+12. the task is not already dominated by an analytic or specialized classical decoder;
+13. all theorem assumptions, failure cases, random seeds, intervals and resource-conversion assumptions are released.
