@@ -36,6 +36,14 @@ from .costing import (
     minimum_instances_for_fixed_plan_advantage,
     optimize_quantum_search_plan,
 )
+from .deep_mlp import (
+    DeepMLPHiddenLayout,
+    DeepMLPLayout,
+    DeepMLPRangeReport,
+    DeepMLPResourceBreakdown,
+    ReversibleIntegerDeepMLPPredicateOracle,
+    compile_structure_preserving_deep_mlp_threshold_oracle,
+)
 from .fixed_point import (
     FixedPointFormat,
     rescale_code,
@@ -76,6 +84,10 @@ __all__ = [
     "AffineRangeReport",
     "AffineRowRange",
     "ClassicalSearchCosts",
+    "DeepMLPHiddenLayout",
+    "DeepMLPLayout",
+    "DeepMLPRangeReport",
+    "DeepMLPResourceBreakdown",
     "EndToEndSearchCostReport",
     "FaultTolerantGateCosts",
     "FiniteIdentifiabilityReport",
@@ -98,6 +110,7 @@ __all__ = [
     "ReversibleIntegerAffineEqualityOracle",
     "ReversibleIntegerAffinePredicateOracle",
     "ReversibleIntegerAffineValueOracle",
+    "ReversibleIntegerDeepMLPPredicateOracle",
     "ReversibleIntegerMLPPredicateOracle",
     "ReversibleMLPLayout",
     "SynthesisComparison",
@@ -112,6 +125,7 @@ __all__ = [
     "compile_model_value_oracle",
     "compile_structure_preserving_affine_equality_oracle",
     "compile_structure_preserving_affine_oracle",
+    "compile_structure_preserving_deep_mlp_threshold_oracle",
     "compile_structure_preserving_mlp_threshold_oracle",
     "compile_structure_preserving_threshold_oracle",
     "compile_verifier_oracle",
