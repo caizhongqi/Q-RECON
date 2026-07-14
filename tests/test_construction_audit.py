@@ -40,7 +40,6 @@ def test_structure_preserving_audit_avoids_truth_table_circularity_only():
         input_bits_per_feature=3,
         accumulator_bits=5,
         threshold=0,
-        predicate="ge",
         signed_inputs=True,
     )
     audit = audit_structure_preserving_oracle(
