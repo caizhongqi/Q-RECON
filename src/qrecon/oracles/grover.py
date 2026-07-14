@@ -14,6 +14,8 @@ class PredicateOracle(Protocol):
 
     def marked_inputs(self) -> tuple[int, ...]: ...
 
+    def phase_sign(self, input_word: int) -> int: ...
+
     def resource_estimate(self, *, phase_kickback: bool = False) -> OracleResourceEstimate: ...
 
 
@@ -58,7 +60,13 @@ class GroverResourceEstimate:
 
 
 def simulate_grover(verifier: PredicateOracle, iterations: int) -> GroverSimulationResult:
-    """Exact state-vector simulation using a compiled one-bit predicate."""
+    """Exact state-vector simulation that executes the compiled phase semantics.
+
+    The phase step calls ``verifier.phase_sign`` on every basis candidate instead
+    of flipping amplitudes from the marked-input list. The marked list is used
+    only to measure final success, so a compiler whose phase netlist disagrees
+    with its reference predicate causes the regression test to fail.
+    """
 
     if verifier.output_bits != 1:
         raise ValueError("Grover simulation requires a one-bit verifier")
@@ -69,8 +77,11 @@ def simulate_grover(verifier: PredicateOracle, iterations: int) -> GroverSimulat
     marked = verifier.marked_inputs()
 
     for _ in range(iterations):
-        for candidate in marked:
-            amplitudes[candidate] *= -1.0
+        for candidate in range(population):
+            sign = verifier.phase_sign(candidate)
+            if sign not in (-1, 1):
+                raise ValueError("phase_sign must return either -1 or 1")
+            amplitudes[candidate] *= sign
         amplitudes = 2.0 * amplitudes.mean() - amplitudes
 
     probabilities_array = np.abs(amplitudes) ** 2
