@@ -10,10 +10,12 @@ proofs in
 [`TRUTH_TABLE_ORACLE_BASELINE.md`](TRUTH_TABLE_ORACLE_BASELINE.md) and
 [`ANF_ORACLE_OPTIMIZATION.md`](ANF_ORACLE_OPTIMIZATION.md), the polynomial
 structure-preserving compiler proofs in
-[`STRUCTURE_PRESERVING_AFFINE_ORACLE.md`](STRUCTURE_PRESERVING_AFFINE_ORACLE.md)
-and [`REVERSIBLE_MLP_ORACLE.md`](REVERSIBLE_MLP_ORACLE.md), the matched-cost rules
-in [`END_TO_END_COST_PROTOCOL.md`](END_TO_END_COST_PROTOCOL.md), and the empirical
-protocol in [`THEORY_EVALUATION_PROTOCOL.md`](THEORY_EVALUATION_PROTOCOL.md).
+[`STRUCTURE_PRESERVING_AFFINE_ORACLE.md`](STRUCTURE_PRESERVING_AFFINE_ORACLE.md),
+[`REVERSIBLE_MLP_ORACLE.md`](REVERSIBLE_MLP_ORACLE.md), and
+[`DEEP_REVERSIBLE_MLP_ORACLE.md`](DEEP_REVERSIBLE_MLP_ORACLE.md), the matched-cost
+rules in [`END_TO_END_COST_PROTOCOL.md`](END_TO_END_COST_PROTOCOL.md), and the
+empirical protocol in
+[`THEORY_EVALUATION_PROTOCOL.md`](THEORY_EVALUATION_PROTOCOL.md).
 
 | Claim | Mathematical status | Executable evidence | Publication status |
 |---|---|---|---|
@@ -36,9 +38,10 @@ protocol in [`THEORY_EVALUATION_PROTOCOL.md`](THEORY_EVALUATION_PROTOCOL.md).
 | the truth-table-derived compiler family is asymptotically efficient | false in the worst case | resource and scaling reports expose exponential term counts | must not be claimed |
 | an integer affine model can be compiled to a clean polynomial-size value or threshold oracle | proved for the declared two's-complement, no-overflow, shift-add and ripple-carry semantics | `ReversibleIntegerAffineValueOracle`, `ReversibleIntegerAffinePredicateOracle`, exhaustive adder/oracle tests and exact resource formulas | ready as the first structure-preserving compiler theorem |
 | a two-layer integer `Affine-ReLU-Affine/Threshold` network can be compiled to a clean predicate and phase oracle | proved by clean suboracle composition, exact sign-controlled ReLU, and Bennett uncomputation | `ReversibleIntegerMLPPredicateOracle`, exhaustive candidate/target/inverse tests, Grover phase regression and exact composed gate counts | ready as a non-linear compiler theorem under the stated integer/two-layer scope |
-| the current structure compiler supports arbitrary fixed-point requantization or arbitrary-depth networks | false | adapters explicitly reject fractional scaling and unsupported architecture contracts | must not be claimed |
+| an arbitrary-depth integer ReLU MLP can be compiled with one shared arithmetic work region | proved by layerwise induction, reverse liveness cleanup, and maximum-work reuse | `ReversibleIntegerDeepMLPPredicateOracle`, exhaustive three-layer tests, exact maximum-versus-sum ancilla and gate-count identities | ready as the depth-generalization and qubit-liveness theorem under integer semantics |
+| the current structure compiler supports arbitrary fixed-point requantization | false | adapters explicitly reject fractional scaling | must not be claimed until a reversible rounding/shift compiler and error theorem exist |
 | the present VQC prior gives quantum query advantage | not established | no supporting oracle experiment | must not be claimed |
-| a structure-preserving compiled neural verifier preserves query advantage end to end | open | clean integer Affine and two-layer ReLU MLP compilers plus cost planner now exist; no matched reconstruction-scale advantage region yet | requires fixed task, candidate prior, strongest classical baseline, precision, state preparation and measured break-even evidence |
+| a structure-preserving compiled neural verifier preserves query advantage end to end | open | clean integer Affine, exact equality, two-layer and arbitrary-depth ReLU MLP compilers plus a cost planner now exist; no matched reconstruction-scale advantage region yet | requires fixed task, candidate prior, strongest classical baseline, precision, state preparation and measured break-even evidence |
 | batch-one biased first-layer Linear gradients reveal the raw input | proved under explicit leakage assumptions | analytic implementation and real-data verification | usable only with the stated assumptions |
 
 ## Target-equivalence Bayes theorem
@@ -93,10 +96,10 @@ and reverses every arithmetic operation. Under its explicit no-overflow proof,
 the modular bit circuit equals the mathematical integer affine map on the full
 input-word domain.
 
-The two-layer MLP backend composes a clean first Affine value oracle, a reversible
-componentwise ReLU copy, and a clean final Affine-threshold oracle. It then
-reverses ReLU and the first Affine oracle. For hidden width `w>1` and `h` hidden
-neurons, ReLU compute/uncompute contributes exactly `4h` X gates and
+For a two-layer MLP, the compiler composes a clean first Affine value oracle, a
+reversible componentwise ReLU copy, and a clean final Affine-threshold oracle. It
+then reverses ReLU and the first Affine oracle. For hidden width `w>1` and `h`
+hidden neurons, ReLU compute/uncompute contributes exactly `4h` X gates and
 `2h(w-1)` Toffolis. If the first Affine call has counts `(X1,C1,T1)` and the
 final predicate `(X2,C2,T2)`, the complete clean MLP has
 
@@ -104,9 +107,29 @@ final predicate `(X2,C2,T2)`, the complete clean MLP has
 X=2X_1+X_2+4h,\quad C=2C_1+C_2,\quad T=2T_1+T_2+2h(w-1).
 \]
 
-These results establish polynomial-size coherent access for the declared integer
-architectures. They do not establish that the resulting fault-tolerant cost is
-lower than classical reconstruction.
+For `L` hidden layers, the same construction is applied inductively and reversed
+in layer order. Let hidden layer `l` contain `h_l` words of width `w_l`, require
+`a_l` arithmetic work qubits and have one-call counts `(X_l,C_l,T_l)`. If the
+final predicate has `(X_f,C_f,T_f)` and requires `a_f` work, then
+
+\[
+Q=n_{\mathrm{in}}+1+2\sum_l h_lw_l+\max(a_1,\ldots,a_L,a_f),
+\]
+
+\[
+X=2\sum_lX_l+X_f+\sum_{l:w_l>1}4h_l,
+\]
+
+\[
+C=2\sum_lC_l+C_f,
+\qquad
+T=2\sum_lT_l+T_f+2\sum_lh_l\max(0,w_l-1).
+\]
+
+The maximum-work term is achieved by reusing one clean arithmetic region after
+every layer. These results establish polynomial-size coherent access for the
+declared integer architectures. They do not establish that the resulting
+fault-tolerant cost is lower than classical reconstruction.
 
 ## Acceptance gate for an end-to-end advantage claim
 
