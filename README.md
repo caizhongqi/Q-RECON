@@ -13,17 +13,21 @@
 ## 核心贡献设想
 
 - 建立经典访问、白盒访问与相干量子访问三类威胁模型。
-- 给出训练数据不可识别时的量子信息论下界。
-- 将量化经典神经网络自动编译为可逆量子预言机。
+- 给出训练数据不可识别时的经典/量子信息论上界。
+- 将量化经典神经网络自动编译为干净的可逆量子预言机。
 - 在唯一可识别的结构化候选空间中设计量子重构算法。
-- 研究 QNN 的表达能力、可训练性、可恢复性与资源消耗之间的关系。
+- 证明并测量预言机构造、近似误差和端到端成本下的优势边界。
 - 建立覆盖多种模型、数据模态和访问方式的统一基准。
 
 ## 文档
 
+- [形式化理论基础、定理与证明](docs/THEORY_FOUNDATIONS.md)
+- [相干预言机编译器规范](docs/COHERENT_ORACLE_SPEC.md)
+- [理论到实验的评估协议](docs/THEORY_EVALUATION_PROTOCOL.md)
 - [研究创新与论文路线](docs/RESEARCH_INNOVATION.md)
 - [数据集与下载方式](docs/DATASETS.md)
 - [本地验证记录](docs/VERIFICATION.md)
+- [解析恢复的适用条件](docs/RECOVERY_ASSUMPTIONS.md)
 
 ## 已实现功能
 
@@ -37,8 +41,12 @@
 - iDLG 风格的分类标签自动推断；
 - 直接、经典生成和变分量子三类重构先验；
 - 基于完整梯度 Jacobian 秩的局部可识别性分析；
+- 确定性 fibre 与噪声观测通道的 Bayes 最优恢复上界；
+- 数据处理不等式、条件 min-entropy 与二元 Helstrom 界的可执行实现；
+- 经典无放回搜索与标准 Grover 成功率/查询数模型；
+- 端到端成本 break-even 与近似预言机误差界；
 - 重构质量与量子逻辑资源统计；
-- YAML 实验配置和轻量单元测试。
+- YAML 实验配置和单元测试。
 
 ## 安装
 
@@ -55,6 +63,7 @@ pip install -e '.[quantum,test]'
 ```bash
 qrecon --config configs/smoke.yaml
 pytest
+python examples/theory_bounds.py
 ```
 
 运行真实数据实验：
@@ -72,10 +81,8 @@ qrecon --config configs/image_community_forensics_lenet_lbfgs.yaml
 
 ## 当前状态
 
-项目已形成可运行的第一阶段研究原型。当前量子模块是潜空间 VQC
-重构先验，不等价于相干受害模型预言机，因此不宣称端到端量子优势。
-后续优势结论必须同时核算数据编码、预言机构造、量子电路、shots 和结果读出成本。
+项目已形成可运行的第一阶段研究原型，并建立了信息论恢复界、局部可识别性、理想查询复杂度、近似预言机误差和端到端成本的形式化基础。当前量子执行模块仍是潜空间 VQC 重构先验，不等价于相干受害模型预言机，因此不宣称端到端量子优势。
 
-在 batch size 1、完整梯度可见且首层带偏置 Linear 直接接收原始输入时，
-解析攻击已在真实 GIFT-Eval 与 Community Forensics 样本上实现
-`within 1e-6 = 100%`；该结论不适用于任意 CNN 或聚合梯度。
+下一核心里程碑是按照编译器规范完成量化 Logistic Regression/MLP 的干净 value oracle、verifier 和 phase oracle，并用穷举真值表验证正确性，同时报告逻辑量子位、ancilla、Toffoli/T-count、深度、精度误差、查询次数、编码和读出成本。
+
+在 batch size 1、完整梯度可见且首层带偏置 Linear 直接接收原始输入时，解析攻击已在真实 GIFT-Eval 与 Community Forensics 样本上实现 `within 1e-6 = 100%`；该结论不适用于任意 CNN、聚合梯度或受防御保护的训练过程。
