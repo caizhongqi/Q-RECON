@@ -2,7 +2,7 @@ name: tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, "agent/**"]
   pull_request:
 
 jobs:
@@ -22,15 +22,18 @@ jobs:
       - run: pip install -e '.[test]'
       - name: Run tests
         run: pytest -q --junitxml=pytest-results-${{ matrix.python-version }}.xml
-      - name: Run executable theory examples
+      - name: Run executable theory and compiler examples
         run: |
           python examples/theory_bounds.py > theory-bounds-${{ matrix.python-version }}.txt
           python examples/coherent_oracle_demo.py > coherent-oracle-${{ matrix.python-version }}.json
           python examples/oracle_scaling.py > oracle-scaling-${{ matrix.python-version }}.json
+          python examples/affine_oracle_cost_report.py > affine-cost-${{ matrix.python-version }}.json
+          python examples/mlp_oracle_demo.py > mlp-oracle-${{ matrix.python-version }}.json
+          python examples/gradient_reconstruction_demo.py > gradient-reconstruction-${{ matrix.python-version }}.json
       - name: Compile Python sources
         if: always()
         run: python -m compileall -q src tests examples
-      - name: Upload classical and theory reports
+      - name: Upload classical, theory, and compiler reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -40,6 +43,9 @@ jobs:
             theory-bounds-${{ matrix.python-version }}.txt
             coherent-oracle-${{ matrix.python-version }}.json
             oracle-scaling-${{ matrix.python-version }}.json
+            affine-cost-${{ matrix.python-version }}.json
+            mlp-oracle-${{ matrix.python-version }}.json
+            gradient-reconstruction-${{ matrix.python-version }}.json
           if-no-files-found: warn
 
   quantum-smoke:
