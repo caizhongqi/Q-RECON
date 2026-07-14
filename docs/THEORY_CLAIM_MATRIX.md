@@ -1,23 +1,24 @@
 # Q-RECON Theory Claim Matrix
 
-The complete access-model, information, query, and cost arguments live in
-[`THEORY_FOUNDATIONS.md`](THEORY_FOUNDATIONS.md), the aggregate-gradient collision
-proof in
-[`BATCH_GRADIENT_NONIDENTIFIABILITY.md`](BATCH_GRADIENT_NONIDENTIFIABILITY.md),
-the exact single-record and aggregate-gradient compiler results in
-[`GRADIENT_RECONSTRUCTION_ORACLE.md`](GRADIENT_RECONSTRUCTION_ORACLE.md) and
-[`BATCH_GRADIENT_ORACLE.md`](BATCH_GRADIENT_ORACLE.md), the coherent compiler
-contract in [`COHERENT_ORACLE_SPEC.md`](COHERENT_ORACLE_SPEC.md), the exact finite
-compiler proofs in
-[`TRUTH_TABLE_ORACLE_BASELINE.md`](TRUTH_TABLE_ORACLE_BASELINE.md) and
-[`ANF_ORACLE_OPTIMIZATION.md`](ANF_ORACLE_OPTIMIZATION.md), the polynomial
-structure-preserving compiler proofs in
-[`STRUCTURE_PRESERVING_AFFINE_ORACLE.md`](STRUCTURE_PRESERVING_AFFINE_ORACLE.md),
-[`REVERSIBLE_MLP_ORACLE.md`](REVERSIBLE_MLP_ORACLE.md), and
-[`DEEP_REVERSIBLE_MLP_ORACLE.md`](DEEP_REVERSIBLE_MLP_ORACLE.md), the matched-cost
-rules in [`END_TO_END_COST_PROTOCOL.md`](END_TO_END_COST_PROTOCOL.md), and the
-empirical protocol in
-[`THEORY_EVALUATION_PROTOCOL.md`](THEORY_EVALUATION_PROTOCOL.md).
+The complete access-model, information, query, compiler, and cost arguments live
+in the following documents:
+
+- [`THEORY_FOUNDATIONS.md`](THEORY_FOUNDATIONS.md);
+- [`BATCH_GRADIENT_NONIDENTIFIABILITY.md`](BATCH_GRADIENT_NONIDENTIFIABILITY.md);
+- [`GRADIENT_RECONSTRUCTION_ORACLE.md`](GRADIENT_RECONSTRUCTION_ORACLE.md) and
+  [`BATCH_GRADIENT_ORACLE.md`](BATCH_GRADIENT_ORACLE.md);
+- [`COHERENT_ORACLE_SPEC.md`](COHERENT_ORACLE_SPEC.md);
+- [`TRUTH_TABLE_ORACLE_BASELINE.md`](TRUTH_TABLE_ORACLE_BASELINE.md) and
+  [`ANF_ORACLE_OPTIMIZATION.md`](ANF_ORACLE_OPTIMIZATION.md);
+- [`STRUCTURE_PRESERVING_AFFINE_ORACLE.md`](STRUCTURE_PRESERVING_AFFINE_ORACLE.md),
+  [`REVERSIBLE_MLP_ORACLE.md`](REVERSIBLE_MLP_ORACLE.md), and
+  [`DEEP_REVERSIBLE_MLP_ORACLE.md`](DEEP_REVERSIBLE_MLP_ORACLE.md);
+- [`FIXED_POINT_REVERSIBLE_COMPILATION.md`](FIXED_POINT_REVERSIBLE_COMPILATION.md);
+- [`ORACLE_CONSTRUCTION_NONCIRCULARITY.md`](ORACLE_CONSTRUCTION_NONCIRCULARITY.md);
+- [`END_TO_END_COST_PROTOCOL.md`](END_TO_END_COST_PROTOCOL.md); and
+- [`THEORY_EVALUATION_PROTOCOL.md`](THEORY_EVALUATION_PROTOCOL.md).
+
+## Claim ledger
 
 | Claim | Mathematical status | Executable evidence | Publication status |
 |---|---|---|---|
@@ -25,32 +26,36 @@ empirical protocol in
 | recovery modulo a declared equivalence relation has a class-posterior Bayes optimum | proved for deterministic and noisy channels | `bayes_equivalence_reconstruction_success`, `channel_bayes_equivalence_reconstruction_success` | ready as a formal evaluation rule |
 | stochastic post-processing cannot increase exact guessing probability | proved by data processing | `postprocess_channel` plus tests | ready as a foundational lemma |
 | full-column gradient Jacobian rank certifies local injectivity | standard inverse-function argument | `gradient_jacobian_report.full_column_rank` | ready only as a local certificate |
-| rank deficiency proves non-identifiability | false in general | counterexample documented | must not be claimed |
-| finite truth-table enumeration gives global collision fibres | exact for the enumerated candidate space | `analyze_finite_oracle` | ready as a finite-space certificate; does not extrapolate beyond the enumerated domain |
+| rank deficiency proves non-identifiability | false in general | documented counterexample | must not be claimed |
+| finite truth-table enumeration gives global collision fibres | exact for the enumerated candidate space | `analyze_finite_oracle` | ready as a finite-space certificate; it does not extrapolate beyond the domain |
 | biased linear-regression aggregate gradients identify the complete batch for `B>=2` | false when inputs and regression targets are both private | explicit continuous `A 1 = 1` batch-mixing collision family and finite non-permutation collision fibres | non-identifiability theorem ready under its stated scope |
 | the same batch-mixing theorem automatically covers fixed labels, softmax, or arbitrary networks | not proved | no supporting construction | must not be claimed |
-| a fixed public-label aggregate-gradient channel may be injective on a bounded finite candidate space | true for the declared 16-candidate two-record benchmark | exhaustive 16/16 distinct observations, clean unique equality oracle and Grover regression | ready only as a finite-domain positive certificate, not a general public-label theorem |
+| a fixed public-label aggregate-gradient channel may be injective on a bounded finite candidate space | true for the declared 16-candidate two-record benchmark | exhaustive 16/16 distinct observations, clean equality oracle and Grover regression | ready only as a finite-domain certificate, not a general theorem |
 | finite public-label injectivity establishes quantum advantage | false | no classical lower bound; algebraic, meet-in-the-middle, SAT/SMT and integer-programming baselines remain | must not be claimed |
-| a full exact single-record biased-linear squared-loss gradient is uniquely invertible when its bias gradient is nonzero | proved by `x_i=(g_w)_i/g_b` and `t=w^T x+b-g_b` | analytic decoder, complete finite fibre enumeration and exhaustive tests | ready as a Q-RECON-specific identifiability theorem |
+| a full exact single-record biased-linear squared-loss gradient is uniquely invertible when its bias gradient is nonzero | proved by `x_i=(g_w)_i/g_b` and `t=w^T x+b-g_b` | analytic decoder, finite fibre enumeration and exhaustive tests | ready as a Q-RECON-specific identifiability theorem |
 | the zero-gradient single-record case identifies the original record | false whenever more than one representable `x` satisfies `t=w^T x+b` | explicit all-zero fibre enumeration | must not be claimed; the Bayes ceiling applies |
-| Grover gives meaningful advantage for full exact single-record biased-linear gradients | false under the declared arithmetic model | nonzero case has an `O(d)` classical analytic decoder; zero case is non-identifiable | negative no-advantage corollary ready |
+| Grover gives meaningful advantage for full exact single-record biased-linear gradients | false under the declared arithmetic model | nonzero case has an `O(d)` decoder; zero case is non-identifiable | negative no-advantage corollary ready |
 | identical released quantum states cannot be distinguished | standard Helstrom result | `binary_helstrom_success` | ready as an information bound |
 | a classical prediction API supplies coherent queries | false by access-model definition | access models documented | must not be claimed |
 | standard Grover search gives a black-box quadratic query reduction | standard result under clean Q-Access | exact success/query helpers and tests | usable only with explicit oracle assumptions |
-| mixed-polarity minterm synthesis implements a clean finite value oracle | proved for the declared truth-table construction | `TruthTableOracle`, independently executed gate netlist, exhaustive basis-permutation and self-inverse tests | ready as a correctness theorem for the exponential baseline |
-| ANF synthesis implements the same clean finite value oracle | proved by uniqueness of the GF(2) multilinear polynomial | `ANFOracle`, Möbius transform, independent netlist execution and exhaustive cross-backend tests | ready as an exact optimization theorem |
-| ANF always beats minterm synthesis | false | `compare_exact_syntheses` retains both records and chooses by declared resource key | must not be claimed |
+| mixed-polarity minterm synthesis implements a clean finite value oracle | proved for the declared truth-table construction | `TruthTableOracle`, gate-list execution and exhaustive basis-permutation tests | ready as a correctness theorem for the exponential baseline |
+| ANF synthesis implements the same clean finite value oracle | proved by uniqueness of the GF(2) multilinear polynomial | `ANFOracle`, Möbius transform and exhaustive cross-backend tests | ready as an exact optimization theorem |
+| ANF always beats minterm synthesis | false | `compare_exact_syntheses` retains both records and chooses by a declared resource key | must not be claimed |
 | affine Boolean predicates can have zero Toffoli cost under ANF | proved from degree-at-most-one monomials | parity regression and scaling reports | ready under the stated decomposition convention |
-| the finite verifier gives the declared phase sign through kickback | follows from clean one-bit XOR semantics | phase tests and Grover simulation using either exact backend | ready for the finite baseline |
-| the truth-table-derived compiler family is asymptotically efficient | false in the worst case | resource and scaling reports expose exponential term counts | must not be claimed |
-| an integer affine model can be compiled to a clean polynomial-size value or threshold oracle | proved for the declared two's-complement, no-overflow, shift-add and ripple-carry semantics | `ReversibleIntegerAffineValueOracle`, `ReversibleIntegerAffinePredicateOracle`, exhaustive adder/oracle tests and exact resource formulas | ready as the first structure-preserving compiler theorem |
-| a two-layer integer `Affine-ReLU-Affine/Threshold` network can be compiled to a clean predicate and phase oracle | proved by clean suboracle composition, exact sign-controlled ReLU, and Bennett uncomputation | `ReversibleIntegerMLPPredicateOracle`, exhaustive candidate/target/inverse tests, Grover phase regression and exact composed gate counts | ready as a non-linear compiler theorem under the stated integer/two-layer scope |
-| an arbitrary-depth integer ReLU MLP can be compiled with one shared arithmetic work region | proved by layerwise induction, reverse liveness cleanup, and maximum-work reuse | `ReversibleIntegerDeepMLPPredicateOracle`, exhaustive three-layer tests, exact maximum-versus-sum ancilla and gate-count identities | ready as the depth-generalization and qubit-liveness theorem under integer semantics |
-| an exact single-record linear-training gradient can be compiled as a polynomial-size clean value/equality/phase oracle | proved by affine residual computation, signed modular variable multiplication, full-gradient copy/equality, and reverse cleanup | `ReversibleSingleRecordGradientValueOracle`, `ReversibleSingleRecordGradientEqualityOracle`, exhaustive multiplier/value/verifier/Grover tests | ready as the first structure-preserving training-leakage compiler theorem |
-| an ordered batch sum-gradient can be compiled with one reusable record-gradient and arithmetic work region | proved by clean record-oracle composition, modular accumulation, output copy and reverse record cleanup | `ReversibleBatchGradientValueOracle`, `ReversibleBatchGradientEqualityOracle`, exhaustive public/private finite tests and exact resource reports | ready as the first aggregate-training-leakage compiler theorem |
-| the current structure compiler supports arbitrary fixed-point requantization | false | adapters explicitly reject fractional scaling | must not be claimed until a reversible rounding/shift compiler and error theorem exist |
-| the present VQC prior gives quantum query advantage | not established | no supporting oracle experiment | must not be claimed |
-| a structure-preserving compiled neural verifier preserves query advantage end to end | open | clean integer Affine, equality, arbitrary-depth ReLU MLP, single-gradient and batch-gradient compilers plus a cost planner now exist; current real leakage cases are classically invertible, colliding, or only finitely certified | requires a harder identifiable structured leakage, strongest classical baseline, precision, state preparation and measured break-even evidence |
+| the finite verifier gives the declared phase sign through kickback | follows from clean one-bit XOR semantics | phase tests and Grover simulation | ready for the finite baseline |
+| truth-table or truth-table-to-ANF compilation is a non-circular one-shot reconstruction pipeline | false when the full candidate table is materialized | `build_truth_table_preimage_index`, `audit_truth_table_oracle`, `audit_anf_oracle` | must not support an end-to-end advantage claim; the artifact can reveal the full marked set |
+| minterm gates hide the unique marked answer from a classical reader | false for a one-bit unique verifier | the marked word is the minterm `required_input`; inverse-index tests recover it | must not be claimed |
+| avoiding candidate enumeration proves classical inversion hardness | false | `audit_structure_preserving_oracle` certifies only absence of table circularity | a separate reduction, lower bound, or strongest-baseline study is required |
+| an integer affine model can be compiled to a clean polynomial-size value or threshold oracle | proved for two's-complement, no-overflow, shift-add and ripple-carry semantics | `ReversibleIntegerAffineValueOracle`, `ReversibleIntegerAffinePredicateOracle`, exhaustive tests and exact resource formulas | ready as a structure-preserving compiler theorem |
+| a two-layer integer `Affine-ReLU-Affine/Threshold` network can be compiled to a clean predicate and phase oracle | proved by clean composition, sign-controlled ReLU and Bennett uncomputation | `ReversibleIntegerMLPPredicateOracle`, exhaustive candidate/target/inverse tests and Grover regression | ready under the stated integer/two-layer scope |
+| an arbitrary-depth integer ReLU MLP can be compiled with one shared arithmetic work region | proved by layerwise induction, reverse liveness cleanup and maximum-work reuse | `ReversibleIntegerDeepMLPPredicateOracle`, exhaustive deep tests and resource identities | ready under integer semantics |
+| an exact single-record linear-training gradient can be compiled as a polynomial-size clean value/equality/phase oracle | proved by residual computation, signed variable multiplication, full-gradient comparison and reverse cleanup | `ReversibleSingleRecordGradientValueOracle`, `ReversibleSingleRecordGradientEqualityOracle`, exhaustive tests | ready as the first structure-preserving training-leakage compiler theorem |
+| an ordered batch sum-gradient can be compiled with one reusable record-gradient and arithmetic work region | proved by clean record composition, modular accumulation, output copy and reverse cleanup | `ReversibleBatchGradientValueOracle`, `ReversibleBatchGradientEqualityOracle`, exhaustive tests and resource reports | ready as an aggregate-training-leakage compiler theorem |
+| half-away-from-zero fixed-point downscaling has a clean polynomial-size reversible implementation | proved for overflow-free `f_target <= f_source`, signed/signed or unsigned/unsigned formats | `ReversibleFixedPointRequantizationOracle`, controlled-increment/negation primitives and exhaustive word tests | ready as a fixed-point arithmetic theorem under the declared scope |
+| an identity fixed-point affine layer can be compiled bit-for-bit to the reference semantics | proved by product-scale integer accumulation, exact bias alignment, clean per-output requantization and reverse affine cleanup | `ReversibleFixedPointAffineValueOracle`, exhaustive multi-output tests and instantiated resources | ready as a fixed-point affine compiler theorem |
+| arbitrary fixed-point upscaling, saturation and deep ReLU MLP lowering are supported | false | these paths are rejected or not yet composed | must not be claimed |
+| the present VQC prior gives quantum query advantage | not established | no supporting coherent-oracle advantage experiment | must not be claimed |
+| a structure-preserving compiled neural verifier preserves query advantage end to end | open | clean integer/fixed-point affine, equality, deep ReLU MLP, single-gradient and batch-gradient compilers plus cost planning and construction audits now exist | requires a harder identifiable leakage, strongest classical solvers, matched preprocessing, precision/state-preparation costs and a measured nonempty break-even region |
 | batch-one biased first-layer Linear gradients reveal the raw input | proved under explicit leakage assumptions | analytic implementation and real-data verification | usable only with the stated assumptions |
 
 ## Target-equivalence Bayes theorem
@@ -67,61 +72,57 @@ P^*_{\mathrm{class}}(X\mid Y)
 For each observed `y`, any decision rule must choose one class `a`. Its joint
 correct mass is the inner class sum, so choosing the largest class posterior is
 optimal independently for every `y`; summing over observations proves the
-formula. The deterministic result follows by setting
-`W(y|x)=1[g(x)=y]`.
+formula. The deterministic result follows by setting `W(y|x)=1[g(x)=y]`.
 
-This theorem is the correct formal target for datasets with permutation,
-isomorphism, tokenization, or application-defined equivalences. Exact-candidate
-success and class success must be reported separately. In particular, ordered
-batch recovery and recovery modulo record permutation are different tasks and
-must have separate Bayes ceilings.
+Exact-candidate and equivalence-class success must be reported separately. In
+particular, ordered batch recovery and recovery modulo record permutation are
+different tasks and have different Bayes ceilings.
 
-## Exact finite compiler theorems
+## Exact finite compiler theorem and limitation
 
-Let `f:{0,1}^n -> {0,1}^m` be the bit-level reference evaluator produced by the
-quantized model semantics.
+For a bit function `f:{0,1}^n -> {0,1}^m`, the mixed-polarity backend emits one
+fully controlled X for every set output bit of every input minterm. If
 
-The mixed-polarity backend emits one fully controlled X for every set output bit
-of every input minterm. Exactly one minterm matches a basis input. If
-`S=sum_x wt(f(x))`, this backend emits exactly `S` terms and, for `n>=2`, uses
-`S(2n-3)` Toffolis under the declared clean-ancilla decomposition.
+\[
+S=\sum_x \operatorname{wt}(f(x)),
+\]
 
-The ANF backend computes the unique multilinear GF(2) polynomial of every output
-bit by Möbius transform and emits one positive-control gate per nonzero monomial.
-A degree-`d>=2` monomial uses `2d-3` Toffolis under the same convention; degree
-zero and one use only X and CNOT. Both independently executed gate lists satisfy
+it emits exactly `S` controlled terms and, for `n>=2`, uses `S(2n-3)` Toffolis
+under the declared clean-ancilla decomposition. The ANF backend emits the unique
+multilinear GF(2) polynomial of each output bit. A degree-`d>=2` monomial uses
+`2d-3` Toffolis; degree zero and one use X and CNOT only. Both satisfy
 
 \[
 U_f|x\rangle|y\rangle|0^a\rangle
 =|x\rangle|y\oplus f(x)\rangle|0^a\rangle.
 \]
 
-The two finite backends are exhaustive cross-checks and resource upper bounds.
-Neither provides a polynomial worst-case neural-network compiler.
+These are correctness and finite-space cross-check backends. They are not valid
+one-shot end-to-end speedup evidence when all `2^n` values are evaluated during
+compilation. The same table supports a classical inverse index; for a unique
+mark it returns the answer before quantum search begins.
 
 ## Structure-preserving compiler theorems
 
-The integer Affine backend computes constant products by sign/zero extension and
-shift-add, accumulates them with clean ripple-carry addition, copies the result,
-and reverses every arithmetic operation. Under its explicit no-overflow proof,
-the modular bit circuit equals the mathematical integer affine map on the full
-input-word domain.
+The integer affine backend computes constant products by sign/zero extension and
+shift-add, accumulates with clean ripple-carry addition, copies the result and
+reverses every arithmetic operation. Under a no-overflow proof, the modular bit
+circuit equals the mathematical integer affine map.
 
-For a two-layer MLP, the compiler composes a clean first Affine value oracle, a
-reversible componentwise ReLU copy, and a clean final Affine-threshold oracle. It
-then reverses ReLU and the first Affine oracle. For hidden width `w>1` and `h`
-hidden neurons, ReLU compute/uncompute contributes exactly `4h` X gates and
-`2h(w-1)` Toffolis. If the first Affine call has counts `(X1,C1,T1)` and the
-final predicate `(X2,C2,T2)`, the complete clean MLP has
+For a two-layer MLP, the compiler composes a clean first affine value oracle, a
+reversible componentwise ReLU copy and a final affine-threshold oracle, then
+reverses ReLU and the first affine call. For hidden width `w>1`, `h` hidden
+neurons, first-layer counts `(X1,C1,T1)` and final counts `(X2,C2,T2)`,
 
 \[
-X=2X_1+X_2+4h,\quad C=2C_1+C_2,\quad T=2T_1+T_2+2h(w-1).
+X=2X_1+X_2+4h,\quad C=2C_1+C_2,\quad
+T=2T_1+T_2+2h(w-1).
 \]
 
-For `L` hidden layers, the same construction is applied inductively and reversed
-in layer order. Let hidden layer `l` contain `h_l` words of width `w_l`, require
-`a_l` arithmetic work qubits and have one-call counts `(X_l,C_l,T_l)`. If the
-final predicate has `(X_f,C_f,T_f)` and requires `a_f` work, then
+For `L` hidden layers, the construction is applied inductively and reversed in
+layer order. If hidden layer `l` has `h_l` words of width `w_l`, one-call counts
+`(X_l,C_l,T_l)` and work `a_l`, while the final predicate has
+`(X_f,C_f,T_f)` and work `a_f`, then
 
 \[
 Q=n_{\mathrm{in}}+1+2\sum_l h_lw_l+\max(a_1,\ldots,a_L,a_f),
@@ -132,25 +133,18 @@ X=2\sum_lX_l+X_f+\sum_{l:w_l>1}4h_l,
 \]
 
 \[
-C=2\sum_lC_l+C_f,
-\qquad
+C=2\sum_lC_l+C_f,\qquad
 T=2\sum_lT_l+T_f+2\sum_lh_l\max(0,w_l-1).
 \]
 
-The maximum-work term is achieved by reusing one clean arithmetic region after
-every layer.
+The maximum-work term follows from reuse of one clean arithmetic region.
 
-For the single-record gradient channel, let `q` be the gradient-component width.
-A signed variable-product compute uses `3q^2+q` Toffolis and `4q^2` CNOTs; clean
-product copy and reverse therefore use `6q^2+2q` Toffolis and `8q^2+q` CNOTs per
-feature. A clean affine residual oracle is applied, the residual and all products
-are copied into the gradient output, and every operation is reversed. A full-word
-equality tree then yields the phase predicate for the released gradient.
-
-For an ordered batch of `B` records and `k=d+1` gradient components, let a clean
-single-record value call have counts `(Xr,Cr,Tr)` and one `q`-bit adder have
-`(Xa,Ca,Ta)`. Building the aggregate, copying it, and reversing all record
-sequences gives
+For a single-record gradient channel with component width `q`, a signed variable
+product compute uses `3q^2+q` Toffolis and `4q^2` CNOTs. Product copy plus reverse
+therefore uses `6q^2+2q` Toffolis and `8q^2+q` CNOTs per feature. For an ordered
+batch of `B` records and `k=d+1` gradient components, if a clean record call has
+counts `(Xr,Cr,Tr)` and one `q`-bit adder has `(Xa,Ca,Ta)`, the aggregate value
+oracle has
 
 \[
 X=4BX_r+2BkX_a,
@@ -164,19 +158,31 @@ C=4BC_r+2BkC_a+kq,
 T=4BT_r+2BkT_a,
 \]
 
-plus explicit public-target constant-load X gates when applicable. If one record
-uses `a_r` work qubits, the batch value oracle requires
+plus public-target constant-load X gates when applicable. Record work is reused,
+so it is not multiplied by `B` in the peak-ancilla count.
+
+## Fixed-point compiler theorem
+
+Let a source code `q` carry `f_s` fractional bits and let `s=f_s-f_t>=0`. The
+reference downscaler is
 
 \[
-Q=n_D+3kq+a_r+b_{\mathrm{public}},
+R_s(q)=\operatorname{sgn}(q)
+\left\lfloor\frac{|q|+2^{s-1}}{2^s}\right\rfloor
 \]
 
-not `B a_r`, because the clean record work is reused.
+for `s>0`, with `R_0(q)=q`. Conditional absolute value, half-unit addition,
+logical shift/copy, sign restoration, output XOR and full uncomputation implement
+this map exactly. If `m=max(n+1,s+1)` is the magnitude width and `t` the target
+width, a signed instance obeys
 
-These results establish polynomial-size coherent access for the declared integer
-architectures and both single-record and aggregate training-leakage maps. They do
-not establish that the resulting fault-tolerant cost is lower than classical
-reconstruction.
+\[
+T_R\le 2\left((m-1)^2+2m\mathbf 1[s>0]+(t-1)^2\right).
+\]
+
+Composing the raw product-scale affine oracle with one clean requantizer per
+output gives bit-for-bit `QuantizedAffineLayer.evaluate_codes` semantics for
+identity activation and overflow-free ranges.
 
 ## Single-record gradient no-advantage theorem
 
@@ -186,17 +192,16 @@ For exact squared-loss gradients of one biased linear record,
 g_w=(w^Tx+b-t)x,\qquad g_b=w^Tx+b-t.
 \]
 
-If `g_b != 0`, the exact decoder
+If `g_b != 0`, the decoder
 
 \[
 x_i=(g_w)_i/g_b,\qquad t=w^Tx+b-g_b
 \]
 
-recovers the candidate in linear time. If `g_b=0`, every representable
-`(x,t=w^Tx+b)` belongs to the all-zero observation fibre. Consequently this task
-is either classically trivial or information-theoretically ambiguous. The
-compiled Grover path is a coherent-circuit verification artifact, not an
-advantage claim.
+recovers the record in linear time. If `g_b=0`, every representable
+`(x,t=w^Tx+b)` belongs to the all-zero fibre. This task is therefore either
+classically trivial or information-theoretically ambiguous. Its compiled Grover
+path is a coherent-circuit verification artifact, not an advantage claim.
 
 ## Aggregate-gradient claim boundary
 
@@ -217,12 +222,15 @@ All conditions below must hold simultaneously:
 3. all work qubits are uncomputed and phase marking is correct;
 4. the number of marked candidates and non-equivalent collisions is reported;
 5. oracle precision yields a non-vacuous hybrid success lower bound;
-6. compiler, state preparation, inverse calls, shots, measurement, and readout are counted;
-7. the classical baseline uses the same verifier, target success, and cost unit;
-8. the measured parameter region satisfies the strict break-even inequality;
-9. the structure-preserving compiler beats both exponential finite baselines on the reported scaling regime;
-10. the verifier represents an actual reconstruction observation/objective rather than only a toy classifier output;
-11. any original-sample recovery claim is below the applicable Bayes ceiling and respects all collision theorems;
-12. the task is not already dominated by an analytic or specialized classical decoder;
-13. ordered and permutation-equivalent batch success are both reported when relevant;
-14. all theorem assumptions, failure cases, random seeds, intervals and resource-conversion assumptions are released.
+6. compiler, state preparation, inverse calls, shots, measurement and readout are counted;
+7. the compiler does not enumerate the full candidate domain, or that enumeration is charged in full;
+8. any compiler artifact and inverse-indexing opportunity are also given to the classical baseline;
+9. the classical baseline uses the same verifier, target success and cost unit;
+10. the measured parameter region satisfies the strict break-even inequality;
+11. the structure-preserving compiler beats finite minterm/ANF baselines in the reported scaling regime;
+12. the verifier represents a real reconstruction observation/objective, not only a toy classifier output;
+13. any original-sample claim respects the applicable Bayes ceiling and collision theorems;
+14. the task is not dominated by an analytic or specialized classical decoder;
+15. ordered and permutation-equivalent batch success are both reported when relevant;
+16. strongest algebraic, SAT/SMT, mixed-integer, meet-in-the-middle and optimized attack baselines are evaluated where applicable;
+17. all theorem assumptions, failure cases, random seeds, confidence intervals and resource-conversion assumptions are released.
