@@ -38,9 +38,23 @@ from .search import (
     grover_success,
     optimal_standard_grover_iterations,
 )
+from .unknown_k import (
+    BBHTEvaluation,
+    BBHTRoundReport,
+    BBHTSchedule,
+    BBHTUniformCertificate,
+    build_bbht_schedule,
+    certify_bbht_uniform_success,
+    evaluate_bbht_schedule,
+    randomized_grover_round_success,
+)
 
 __all__ = [
     "AlgorithmCost",
+    "BBHTEvaluation",
+    "BBHTRoundReport",
+    "BBHTSchedule",
+    "BBHTUniformCertificate",
     "BatchCollisionReport",
     "CostComparison",
     "LinearBatchGradientObservation",
@@ -49,6 +63,8 @@ __all__ = [
     "bayes_equivalence_reconstruction_success",
     "bayes_reconstruction_success",
     "binary_helstrom_success",
+    "build_bbht_schedule",
+    "certify_bbht_uniform_success",
     "channel_bayes_equivalence_reconstruction_success",
     "channel_bayes_reconstruction_success",
     "classical_queries_for_success",
@@ -57,6 +73,7 @@ __all__ = [
     "compare_search_queries",
     "conditional_min_entropy_bits",
     "construct_linear_batch_collision",
+    "evaluate_bbht_schedule",
     "expected_classical_queries",
     "grover_queries_for_success",
     "grover_success",
@@ -67,6 +84,7 @@ __all__ = [
     "optimal_standard_grover_iterations",
     "oracle_error_success_lower_bound",
     "postprocess_channel",
+    "randomized_grover_round_success",
     "symmetric_pair_mixing",
     "uniform_fibre_success",
     "validate_batch_mixing_matrix",
