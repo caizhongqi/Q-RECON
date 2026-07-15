@@ -44,7 +44,9 @@ def main() -> None:
         },
         attack={
             "prior": "direct",
-            "known_target": True,
+            # Ordered targets are included in the private object. Supplying their
+            # channel labels publicly would change the observation model.
+            "known_target": False,
             "steps": 1,
             "learning_rate": 0.01,
         },
@@ -90,6 +92,11 @@ def main() -> None:
         tolerance=2e-5,
     )
     payload = report.to_dict()
+    payload["private_target_contract"] = (
+        "Ordered histories and their ordered future targets are private. All release "
+        "mechanisms are applied after the identical full-gradient channel, so data "
+        "processing preserves the same orbit for classical and quantum estimators."
+    )
     print(json.dumps(payload, indent=2, sort_keys=True))
     if not report.quality_gate.passed:
         raise SystemExit("ETTm1 channel-permutation release-closure gate failed")
