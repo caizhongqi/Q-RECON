@@ -59,6 +59,11 @@ from .known_target_packed_probes import (
     build_packed_linear_gradient_probe_plan,
     recover_linear_gradient_oracle_statistics_packed,
 )
+from .known_target_probe_optimality import (
+    PhysicalProbeLowerBoundWitness,
+    construct_physical_probe_lower_bound_witness,
+    exact_known_target_probe_query_count,
+)
 from .known_target_quotient import (
     KnownTargetOrbitInvariants,
     LinearGradientOracleProbeRecovery,
@@ -105,6 +110,7 @@ __all__ = [
     "LinearGradientOracleStatistics",
     "LinearGradientOracleValue",
     "PackedLinearGradientProbePlan",
+    "PhysicalProbeLowerBoundWitness",
     "SearchComparison",
     "UniformGradientQueryDifferenceBound",
     "adaptive_gaussian_transcript_success_upper_bound",
@@ -125,10 +131,12 @@ __all__ = [
     "construct_known_target_orbit_representative",
     "construct_known_target_rotation_collision",
     "construct_linear_batch_collision",
+    "construct_physical_probe_lower_bound_witness",
     "equal_covariance_gaussian_binary_success",
     "evaluate_bbht_schedule",
     "evaluate_linear_gradient_oracle",
     "evaluate_linear_gradient_oracle_from_statistics",
+    "exact_known_target_probe_query_count",
     "expected_classical_queries",
     "gradient_oracle_statistic_distance",
     "grover_queries_for_success",
