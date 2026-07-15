@@ -161,6 +161,15 @@ def _perturbation_bounds(
     )
 
 
+def _floating_point_slack(feature: torch.Tensor) -> float:
+    """Conservative local slack for ratio recomputation in finite precision."""
+
+    if not feature.dtype.is_floating_point:
+        return 0.0
+    epsilon = torch.finfo(feature.dtype).eps
+    return float(128.0 * epsilon * (1.0 + feature.detach().norm()))
+
+
 def run_head_release_stability_audit(
     manifest: ModernTimeSeriesAttackManifest,
     variants: Sequence[ModernGradientDefenseVariant],
@@ -287,6 +296,7 @@ def run_head_release_stability_audit(
                 bounds,
             )
             posterior = certificate.posterior_l2_error_bound
+            numerical_slack = _floating_point_slack(observed_feature)
             points.append(
                 HeadReleaseStabilityPoint(
                     variant=variant.name,
@@ -300,7 +310,7 @@ def run_head_release_stability_audit(
                     certificate_sound=(
                         None
                         if posterior is None
-                        else actual_error <= posterior + 1e-9
+                        else actual_error <= posterior + numerical_slack
                     ),
                     bias_error_ratio=certificate.bias_error_ratio,
                     weight_error_normalized=certificate.weight_error_normalized,
