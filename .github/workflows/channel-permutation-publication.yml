@@ -1,0 +1,54 @@
+name: channel-permutation-publication
+
+on:
+  push:
+    branches: ["agent/**"]
+    paths:
+      - ".github/workflows/channel-permutation-publication.yml"
+      - "examples/ettm1_itransformer_channel_permutation.py"
+      - "scripts/fetch_pinned_ettm1.py"
+      - "src/qrecon/theory/channel_permutation.py"
+      - "src/qrecon/models/**"
+      - "tests/test_channel_permutation_gradient.py"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  ettm1-itransformer-gradient-orbit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Verify permutation theorem implementation
+        run: pytest -q tests/test_channel_permutation_gradient.py --junitxml=channel-permutation-tests.xml
+      - name: Download and verify immutable ETTm1 data
+        run: |
+          python scripts/fetch_pinned_ettm1.py \
+            --output data/ETT-small/ETTm1.csv \
+            --manifest ettm1-channel-permutation-source.json
+      - name: Certify 20 real iTransformer full-gradient collisions
+        run: |
+          set -o pipefail
+          python examples/ettm1_itransformer_channel_permutation.py \
+            > ettm1-itransformer-channel-permutation.json \
+            2> >(tee ettm1-itransformer-channel-permutation.stderr >&2)
+      - name: Upload channel-permutation theorem evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ettm1-itransformer-channel-permutation
+          path: |
+            channel-permutation-tests.xml
+            ettm1-channel-permutation-source.json
+            ettm1-itransformer-channel-permutation.json
+            ettm1-itransformer-channel-permutation.stderr
+          if-no-files-found: error
