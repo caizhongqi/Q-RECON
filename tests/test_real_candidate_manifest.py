@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 
@@ -106,3 +108,27 @@ def test_publication_source_hash_is_enforced_at_load_time():
         loader_overrides={"synthetic_forecasting": lambda _: values},
     )
     assert verified.source_hash_matches is True
+
+
+@pytest.mark.parametrize(
+    ("path", "dataset", "revision"),
+    (
+        (
+            Path("configs/real_candidates/gifteval_batch2.json"),
+            "gift_eval",
+            "30841734ac5cfddbd0c3bad6d09d2b6b32becbb0",
+        ),
+        (
+            Path("configs/real_candidates/community_forensics_batch2.json"),
+            "community_forensics_small",
+            "6c539a534c07917307c381f5af4053c6091b5278",
+        ),
+    ),
+)
+def test_revision_pinned_calibration_templates_parse(path, dataset, revision):
+    manifest = RealBatchGradientManifest.from_json(path.read_text(encoding="utf-8"))
+    assert manifest.dataset == dataset
+    assert manifest.dataset_revision == revision
+    assert manifest.expected_selected_source_sha256 is None
+    assert not manifest.publication_mode
+    assert len(manifest.sha256) == 64
