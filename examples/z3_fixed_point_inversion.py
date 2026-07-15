@@ -5,8 +5,10 @@ import json
 from qrecon.oracles import (
     FixedPointFormat,
     QuantizedAffineLayer,
-    ReversibleFixedPointMLPEqualityOracle,
     solve_fixed_point_mlp_exact_output,
+)
+from qrecon.oracles.domain_oracle import (
+    ReversibleDomainRestrictedMLPEqualityOracle,
 )
 from qrecon.oracles.z3_inversion import solve_fixed_point_mlp_with_z3
 
@@ -47,23 +49,18 @@ def main() -> None:
     smt = solve_fixed_point_mlp_with_z3(
         hidden, output, target, domains=domains
     )
-    oracle = ReversibleFixedPointMLPEqualityOracle(
+    oracle = ReversibleDomainRestrictedMLPEqualityOracle(
         hidden,
         output,
         target,
+        domains,
         max_enumeration_bits=hidden.input_dimension * hidden.input_format.bits,
     )
     smt_words = tuple(sorted(oracle.encode_inputs(row) for row in smt.solutions))
     branch_words = tuple(
         sorted(oracle.encode_inputs(row) for row in branch_and_bound.solutions)
     )
-    full_word_marked = oracle.marked_inputs()
-    declared_domain_marked = tuple(
-        word
-        for word in full_word_marked
-        if oracle.value.hidden.affine.raw_affine.decode_input_word(word)
-        in set(smt.solutions)
-    )
+    oracle_words = oracle.marked_inputs()
 
     print(
         json.dumps(
@@ -71,18 +68,23 @@ def main() -> None:
                 "task": "fractional fixed-point two-layer MLP exact-output inversion",
                 "target_codes": list(target),
                 "declared_candidate_count": branch_and_bound.candidate_count,
+                "full_word_population": 1 << oracle.input_bits,
                 "branch_and_bound": branch_and_bound.to_dict(),
                 "z3": smt.to_dict(),
                 "branch_and_bound_equals_z3": branch_words == smt_words,
-                "z3_equals_oracle_on_declared_domain": (
-                    smt_words == declared_domain_marked
+                "z3_equals_domain_restricted_oracle": smt_words == oracle_words,
+                "domain_restricted_oracle_marked_count": len(oracle_words),
+                "domain_membership_candidate_count": oracle.candidate_count,
+                "domain_membership_resources": (
+                    oracle.domain.resource_estimate(phase_kickback=True).to_dict()
                 ),
-                "full_word_oracle_marked_count": len(full_word_marked),
-                "declared_domain_marked_count": len(declared_domain_marked),
-                "domain_warning": (
-                    "The coherent register spans the full fixed-point word space. "
-                    "A quantum comparison over the smaller declared domain must "
-                    "include domain state preparation or a clean membership predicate."
+                "combined_oracle_resources": (
+                    oracle.resource_estimate(phase_kickback=True).to_dict()
+                ),
+                "domain_contract": (
+                    "Invalid full-word states are rejected coherently by an explicit "
+                    "clean product-domain predicate. Uniform state preparation over "
+                    "only the structured domain remains a separately priced option."
                 ),
             },
             indent=2,
