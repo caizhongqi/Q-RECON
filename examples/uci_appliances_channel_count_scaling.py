@@ -119,7 +119,7 @@ def main() -> None:
             and witness.gradient_relative_l2_difference <= TOLERANCE
             and witness.fibre_bound.orbit_size == expected_orbit
             and math.isclose(
-                witness.fibre_bound.uniform_exact_success_upper_bound,
+                witness.fibre_bound.uniform_exact_ordered_recovery_ceiling,
                 1.0 / expected_orbit,
                 rel_tol=1e-12,
                 abs_tol=0.0,
