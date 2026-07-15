@@ -12,21 +12,11 @@ on:
       - "src/qrecon/models/**"
       - "tests/test_channel_permutation_gradient.py"
       - "tests/test_channel_permutation_ablation.py"
-  pull_request:
-    paths:
-      - ".github/workflows/channel-permutation-publication.yml"
-      - "examples/ettm1_itransformer_channel_permutation.py"
-      - "examples/ettm1_channel_permutation_ablation.py"
-      - "scripts/fetch_pinned_ettm1.py"
-      - "src/qrecon/theory/channel_permutation.py"
-      - "src/qrecon/models/**"
-      - "tests/test_channel_permutation_gradient.py"
-      - "tests/test_channel_permutation_ablation.py"
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ettm1-modern-gradient-orbits:
