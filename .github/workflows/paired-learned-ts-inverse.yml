@@ -24,9 +24,11 @@ on:
       - "src/qrecon/models/**"
   workflow_dispatch:
 
+# A confirmatory paired study must finish once declared. New branch commits create
+# separate artifacts rather than cancelling the in-flight experimental record.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   paired-gifteval-patchtst:
