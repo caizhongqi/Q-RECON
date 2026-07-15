@@ -6,7 +6,8 @@ from typing import Sequence
 from .arithmetic import _resource_estimate
 from .comparators import append_equality_to_constant
 from .compiler import OracleResourceEstimate
-from .fixed_point_mlp import ReversibleFixedPointMLPValueOracle, _remap_gates
+from .fixed_point_mlp import _remap_gates
+from .fixed_point_mlp_reachability import ReversibleFixedPointMLPValueOracle
 from .models import QuantizedAffineLayer
 from .reversible import ReversibleCircuit
 
