@@ -6,18 +6,22 @@ on:
     paths:
       - ".github/workflows/channel-permutation-publication.yml"
       - "examples/ettm1_itransformer_channel_permutation.py"
+      - "examples/ettm1_channel_permutation_ablation.py"
       - "scripts/fetch_pinned_ettm1.py"
       - "src/qrecon/theory/channel_permutation.py"
       - "src/qrecon/models/**"
       - "tests/test_channel_permutation_gradient.py"
+      - "tests/test_channel_permutation_ablation.py"
   pull_request:
     paths:
       - ".github/workflows/channel-permutation-publication.yml"
       - "examples/ettm1_itransformer_channel_permutation.py"
+      - "examples/ettm1_channel_permutation_ablation.py"
       - "scripts/fetch_pinned_ettm1.py"
       - "src/qrecon/theory/channel_permutation.py"
       - "src/qrecon/models/**"
       - "tests/test_channel_permutation_gradient.py"
+      - "tests/test_channel_permutation_ablation.py"
   workflow_dispatch:
 
 concurrency:
@@ -25,9 +29,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  ettm1-itransformer-gradient-orbit:
+  ettm1-modern-gradient-orbits:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -36,8 +40,12 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: pip install -e '.[test]'
-      - name: Verify permutation theorem implementation
-        run: pytest -q tests/test_channel_permutation_gradient.py --junitxml=channel-permutation-tests.xml
+      - name: Verify permutation theorem and ablation implementation
+        run: |
+          pytest -q \
+            tests/test_channel_permutation_gradient.py \
+            tests/test_channel_permutation_ablation.py \
+            --junitxml=channel-permutation-tests.xml
       - name: Download and verify immutable ETTm1 data
         run: |
           python scripts/fetch_pinned_ettm1.py \
@@ -49,14 +57,22 @@ jobs:
           python examples/ettm1_itransformer_channel_permutation.py \
             > ettm1-itransformer-channel-permutation.json \
             2> >(tee ettm1-itransformer-channel-permutation.stderr >&2)
+      - name: Run iTransformer, shared PatchTST, and channel-specific-head ablation
+        run: |
+          set -o pipefail
+          python examples/ettm1_channel_permutation_ablation.py \
+            > ettm1-channel-permutation-ablation.json \
+            2> >(tee ettm1-channel-permutation-ablation.stderr >&2)
       - name: Upload channel-permutation theorem evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ettm1-itransformer-channel-permutation
+          name: ettm1-channel-permutation-publication
           path: |
             channel-permutation-tests.xml
             ettm1-channel-permutation-source.json
             ettm1-itransformer-channel-permutation.json
             ettm1-itransformer-channel-permutation.stderr
+            ettm1-channel-permutation-ablation.json
+            ettm1-channel-permutation-ablation.stderr
           if-no-files-found: error
