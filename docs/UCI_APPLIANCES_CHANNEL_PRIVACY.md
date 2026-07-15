@@ -22,8 +22,8 @@ extracted CSV are checked before any experiment runs.
 - context: 16
 - forecast horizon: 4
 - window stride: 8
-- public labeled calibration windows: 0--19
-- private side-information evaluation windows: 20--39
+- public labeled calibration windows: 0--19 in the primary point experiment
+- private side-information evaluation windows: 20--39 in the primary experiment
 - fibre/release windows: 40--59
 - side-information permutations per evaluation window: 5
 - release audit: float64 with tolerance `1e-10`
@@ -87,13 +87,44 @@ This empirical attacker is not Bayes-optimal. Its failure must not be interprete
 as a universal guarantee against arbitrary semantic side information. Full public
 channel identities collapse the permutation ambiguity by definition.
 
+## Calibration-size phase diagram
+
+A second publication workflow fixes one disjoint private evaluation set and the
+same five hidden permutation seeds while varying the number of public labeled
+calibration windows. Workflow run `29414849906` and artifact `8342686065` have
+artifact digest:
+
+```text
+sha256:f1cd549396597544dca25e6edd2f9f38a6f8fc9415791178cce9f94eb6f20f05
+```
+
+All 700 declared trials completed and all quality gates passed.
+
+| public calibration windows | exact semantic order | mean channel accuracy | 95% bootstrap interval |
+|---:|---:|---:|---:|
+| 1 | 0/100 | 12.857% | [10.568%, 15.286%] |
+| 2 | 0/100 | 18.571% | [15.857%, 21.000%] |
+| 5 | 0/100 | 15.000% | [12.286%, 17.714%] |
+| 10 | 0/100 | 27.143% | [23.711%, 30.571%] |
+| 20 | 0/100 | 21.429% | [18.286%, 24.571%] |
+| 40 | 0/100 | 28.571% | [25.000%, 32.286%] |
+| 60 | 0/100 | 23.571% | [19.429%, 27.857%] |
+
+At every calibration level, the 95% Wilson upper bound for exact-order recovery
+is 3.699%. The empirical curve is not monotone: more public windows do not
+necessarily improve this fixed diagonal-Gaussian feature matcher. This is useful
+negative evidence against presenting one calibration count as a universal
+side-information threshold, but it is not a proof that a stronger attacker could
+not exploit larger or different public metadata.
+
 ## Combined evidence consequence
 
 The previous ETT evidence contains 220 real-data fibre points. This independent
 UCI experiment adds 40 more, bringing the current total to 260 real-data fibre
 points across five source files, two modern forecasting families, short and
 long-context settings, release postprocessing, optimizer-transcript tests and
-side-information studies.
+side-information studies. The additional calibration sweep contributes 700
+fixed-evaluation side-information trials.
 
 The UCI result strengthens external validity; it does not change the theorem's
 threat model. The central claim remains conditional on private semantic channel
