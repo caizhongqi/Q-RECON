@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  calibrate-source:
+  verify-locked-source:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -23,26 +23,26 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Download source and compute immutable hashes
+      - name: Download source and verify immutable hashes
         run: |
           python scripts/fetch_uci_appliances.py \
             --output-dir data/UCI-appliances \
             --manifest outputs/uci-appliances-source.json
-      - name: Validate calibration manifest
+      - name: Validate locked source manifest
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
           payload = json.loads(Path("outputs/uci-appliances-source.json").read_text())
-          assert payload["archive_bytes"] > 0
-          assert payload["csv_bytes"] > 0
-          assert len(payload["archive_sha256"]) == 64
-          assert len(payload["csv_sha256"]) == 64
-          assert payload["locked"] is False
+          assert payload["archive_bytes"] == 11979507
+          assert payload["csv_bytes"] == 11979363
+          assert payload["archive_sha256"] == payload["expected_archive_sha256"]
+          assert payload["csv_sha256"] == payload["expected_csv_sha256"]
+          assert payload["locked"] is True
           print(json.dumps(payload, indent=2, sort_keys=True))
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: uci-appliances-source-calibration
+          name: uci-appliances-source-locked
           path: outputs/uci-appliances-source.json
           if-no-files-found: error
