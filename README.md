@@ -26,6 +26,8 @@
 - [CCF-A 投稿准备度与内部拒绝规则](docs/CCF_A_READINESS.md)
 - [统计基准、置信区间与证据质量协议](docs/STATISTICAL_BENCHMARK_PROTOCOL.md)
 - [可哈希清单、重复计时与层级统计](docs/MANIFEST_DRIVEN_BENCHMARKS.md)
+- [真实数据双记录梯度 fibre、two-sum 与优势/无优势相图](docs/REAL_DATA_BATCH_GRADIENT_PHASE_DIAGRAM.md)
+- [量化候选的碰撞、失真与加载审计](docs/QUANTIZED_CANDIDATE_AUDIT.md)
 - [聚合梯度的批次不可识别性定理](docs/BATCH_GRADIENT_NONIDENTIFIABILITY.md)
 - [单样本完整训练梯度的可识别性与相干重构预言机](docs/GRADIENT_RECONSTRUCTION_ORACLE.md)
 - [干净聚合梯度重构预言机与可识别性区间](docs/BATCH_GRADIENT_ORACLE.md)
@@ -55,6 +57,7 @@
 - GIFT-Eval 时间序列流式加载器；
 - TIME 2026 本地数据适配器；
 - Community Forensics Small 图像流式加载器；
+- GIFT-Eval 与 Community Forensics 的 revision-pinned 候选清单和选中特征/目标 SHA256 锁定；
 - CLOFAI/通用 ImageFolder 适配器；
 - 时间序列 MLP 与图像 CNN 受害模型；
 - 单样本梯度泄漏与梯度反演攻击；
@@ -68,6 +71,8 @@
 - batch size ≥ 2 的带偏置线性回归聚合梯度连续碰撞构造；
 - 单样本带偏置线性回归完整梯度的“非零残差可解析恢复／零残差不可识别”二分定理；
 - 公开标签小候选域上的聚合梯度全局可识别证书，以及私有标签下超出批次置换的非平凡碰撞 fibre；
+- 双记录加性梯度的精确二分边界：`K>1` 时原始批次信息论不可识别，`K=1` 时向量 two-sum 与 Grover 均为候选数的线性指数；
+- 真实/合成候选的量化碰撞、全局 pair fibre、条件 Bayes 上限、完整 two-sum 解集与失败精度保留；
 - 经典无放回搜索、已知 `K` 标准 Grover 与未知 `K` BBHT 随机迭代成功率/查询模型；
 - 对所有允许正标记数逐一核验的 BBHT 有限空间统一成功率证书，并单独报告 phase 与测量后验证查询；
 - 精确 verifier 下的 BBHT 零解一侧错误判定：`K=0` 时无假阳性，正标记数继承统一检测率；
@@ -100,7 +105,7 @@
 - parity、all-zero equality、majority、Affine、MLP、single-gradient 与 batch-gradient predicate 的综合扩展分析；
 - 重构质量与量子逻辑资源统计；
 - Python 3.10/3.12 理论与编译器 CI、独立 Z3 solver CI、统计/清单报告归档，以及 PennyLane 前向反向 smoke test；
-- YAML 实验配置和单元测试。
+- YAML/JSON 实验配置和单元测试。
 
 ## 安装
 
@@ -124,6 +129,7 @@ python examples/affine_oracle_cost_report.py
 python examples/mlp_oracle_demo.py
 python examples/gradient_reconstruction_demo.py
 python examples/batch_gradient_demo.py
+python examples/real_batch_gradient_phase_diagram.py
 python examples/fixed_point_mlp_exact_observation.py
 python examples/unknown_k_search.py
 python examples/unknown_k_cost_envelope.py
@@ -142,10 +148,14 @@ qrecon --config configs/image_community_forensics.yaml
 qrecon --config configs/time_gifteval_analytic.yaml
 qrecon --config configs/image_community_forensics_analytic.yaml
 qrecon --config configs/image_community_forensics_lenet_lbfgs.yaml
+python examples/real_batch_gradient_phase_diagram.py \
+  --manifest configs/real_candidates/gifteval_batch2.json
+python examples/real_batch_gradient_phase_diagram.py \
+  --manifest configs/real_candidates/community_forensics_batch2.json
 ```
 
 实验结果写入 `outputs/`，包括 `report.json` 和重构张量
-`reconstruction.pt`。
+`reconstruction.pt`；相图示例把完整 JSON 报告写到标准输出，建议由调用方重定向并归档。
 
 ## 当前状态
 
@@ -153,8 +163,8 @@ qrecon --config configs/image_community_forensics_lenet_lbfgs.yaml
 
 相干编译部分具备多类可交叉验证的路径：mixed-polarity minterm、GF(2) ANF、保持结构的整数 Affine、任意深度整数 ReLU MLP、任意深度定点 Affine/ReLU value/threshold/equality、结构化 product-domain membership、单样本完整训练梯度，以及有序批次聚合梯度。枚举型后端提供有限空间独立精确综合基线；保持结构的后端执行真实 X/CNOT/Toffoli gate netlist，并通过 compute-copy-uncompute、反向层清理、逐记录反计算和共享工作区复用将全部算术、预激活、激活、残差、乘法、比较、域 membership 和聚合寄存器恢复为零。小规模配置对所有候选、两个初始目标位、逆电路、phase sign、Grover 曲线、碰撞 fibre、经典/SMT 解集一致性和资源恒等式进行穷举验证。
 
-固定点 MLP exact-output 任务已经形成“bit-exact 观测定义 → 完备 branch-and-bound 与 SMT 经典解集 → clean domain/value/equality/phase oracle → 同一标记集合 → 未知 `K` 与零解搜索证书 → Grover 与逻辑资源报告 → 专用经典求解器成本包络”的闭环。显式经验候选表还增加了编译 bit-probe 下界与可执行无优势 workload 区间，避免把 QRAM 或数据加载当作免费资源。统计层进一步提供置信区间、失败率、规模拟合、环境清单和内部证据质量门；清单执行器固定完整实验语义，记录预热/重复运行及所有异常，并先按种子折叠重复计时再跨独立种子统计。CI-smoke 只验证流水线，论文级实验仍需固定硬件、更多重复和规模点、进程级资源限制以及真实数据候选先验。
+真实候选双记录梯度路径现在形成“revision-pinned 数据清单 → 选中特征/目标哈希 → 多精度量化与碰撞审计 → 全局 pair fibre → 完整向量 two-sum → 枚举型相干语义参考 → 未知 `K` 证书 → 显式加载摊销边界”的闭环。其核心结论是一个严格二分：目标 fibre 非唯一时原始索引批次不可识别；目标 fibre 唯一时，经典 two-sum 与理想 Grover 已具有相同的线性查询/时间指数，因此不能把对所有候选对的二次扫描作为经典基线来宣称新的平方加速。
 
-项目仍不宣称已经获得实际端到端量子优势。最关键的下一门槛是把一个非平凡且全局可识别的真实结构化数据泄漏任务、更多 SAT/SMT/MIP 与代数求解器、多启动连续优化、固定硬件统计实验和故障容错参数不确定性纳入同一成功率与成本口径，并得到稳健非空的优势区域，或形成覆盖目标 workload 的严格无优势边界。当前 VQC 仍只是潜空间重构先验，不是上述相干训练泄漏预言机。
+项目仍不宣称已经获得实际端到端量子优势。下一门槛不再是补齐双记录加性任务，而是选择一个没有廉价解析或 two-sum 分解、仍可全局识别的真实泄漏任务，完成非枚举相干访问、最强 SAT/SMT/MIP/代数/连续经典求解器、固定硬件重复实验与故障容错成本相图；另一条同样有效的顶会路线，是把当前二分推广为覆盖更广模型与访问条件的严格无优势边界。当前 VQC 仍只是潜空间重构先验，不是上述相干训练泄漏预言机。
 
 在 batch size 1、完整梯度可见且首层带偏置 Linear 直接接收原始输入时，解析攻击已在真实 GIFT-Eval 与 Community Forensics 样本上实现 `within 1e-6 = 100%`；该结论不适用于任意 CNN、聚合梯度或受防御保护的训练过程。
