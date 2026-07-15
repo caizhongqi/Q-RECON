@@ -10,6 +10,14 @@ on:
       - "src/qrecon/theory/channel_permutation.py"
       - "src/qrecon/models/**"
       - "tests/test_channel_permutation_gradient.py"
+  pull_request:
+    paths:
+      - ".github/workflows/channel-permutation-publication.yml"
+      - "examples/ettm1_itransformer_channel_permutation.py"
+      - "scripts/fetch_pinned_ettm1.py"
+      - "src/qrecon/theory/channel_permutation.py"
+      - "src/qrecon/models/**"
+      - "tests/test_channel_permutation_gradient.py"
   workflow_dispatch:
 
 concurrency:
