@@ -50,6 +50,7 @@ class ChannelPermutationTrainingTranscriptWitness:
     fibre_bound: ChannelPermutationFibreBound
     optimizer: str
     steps: int
+    numerical_dtype: str
     records: tuple[ChannelPermutationTrainingStep, ...]
     final_model_delta_difference: TensorTupleDifference
 
@@ -87,6 +88,7 @@ class ChannelPermutationTrainingTranscriptWitness:
             "fibre_bound": self.fibre_bound.to_dict(),
             "optimizer": self.optimizer,
             "steps": self.steps,
+            "numerical_dtype": self.numerical_dtype,
             "records": [record.to_dict() for record in self.records],
             "final_model_delta_difference": self.final_model_delta_difference.to_dict(),
             "maximum_loss_absolute_difference": self.maximum_loss_absolute_difference,
@@ -177,6 +179,7 @@ def channel_permutation_training_transcript_witness(
     learning_rate: float = 1e-3,
     weight_decay: float = 0.0,
     momentum: float = 0.9,
+    audit_dtype: torch.dtype = torch.float64,
 ) -> ChannelPermutationTrainingTranscriptWitness:
     """Certify equality of deterministic gradient-based training transcripts.
 
@@ -187,10 +190,14 @@ def channel_permutation_training_transcript_witness(
     reveal no additional channel-order information beyond the one-step gradient.
 
     The executable witness uses full-batch MSE and one of SGD, momentum SGD, Adam,
-    or AdamW. The model must have deterministic forward/backward execution for the
-    declared batch (for example, dropout disabled or common randomness explicitly
-    coupled). Small floating-point residuals can occur because channel permutation
-    changes reduction order.
+    or AdamW. It performs the certificate in float64 by default. This is deliberate:
+    float32 reduction-order residuals that are immaterial to the exact theorem can be
+    amplified by Adam/AdamW's coordinate-wise normalization when a true gradient is
+    near zero. A publication certificate must audit the mathematical symmetry rather
+    than misclassify that avoidable numerical artifact as information leakage.
+
+    The model must have deterministic forward/backward execution for the declared
+    batch (for example, dropout disabled or common randomness explicitly coupled).
     """
 
     if inputs.ndim != 3 or targets.ndim != 3:
@@ -200,12 +207,17 @@ def channel_permutation_training_transcript_witness(
     count = int(steps)
     if count <= 0:
         raise ValueError("steps must be positive")
+    if audit_dtype not in (torch.float32, torch.float64):
+        raise ValueError("audit_dtype must be torch.float32 or torch.float64")
     values = validate_channel_permutation(permutation, int(inputs.shape[-1]))
-    permuted_inputs = apply_channel_permutation(inputs, values)
-    permuted_targets = apply_channel_permutation(targets, values)
 
-    left_model = copy.deepcopy(model)
-    right_model = copy.deepcopy(model)
+    audit_inputs = inputs.detach().to(dtype=audit_dtype)
+    audit_targets = targets.detach().to(dtype=audit_dtype)
+    permuted_inputs = apply_channel_permutation(audit_inputs, values)
+    permuted_targets = apply_channel_permutation(audit_targets, values)
+
+    left_model = copy.deepcopy(model).to(dtype=audit_dtype)
+    right_model = copy.deepcopy(model).to(dtype=audit_dtype)
     left_model.train()
     right_model.train()
     left_parameters = tuple(
@@ -236,7 +248,7 @@ def channel_permutation_training_transcript_witness(
     for step in range(1, count + 1):
         left_optimizer.zero_grad(set_to_none=True)
         right_optimizer.zero_grad(set_to_none=True)
-        left_loss = (left_model(inputs) - targets).square().mean()
+        left_loss = (left_model(audit_inputs) - audit_targets).square().mean()
         right_loss = (right_model(permuted_inputs) - permuted_targets).square().mean()
         left_loss.backward()
         right_loss.backward()
@@ -279,9 +291,12 @@ def channel_permutation_training_transcript_witness(
     )
     return ChannelPermutationTrainingTranscriptWitness(
         permutation=values,
-        fibre_bound=tensor_channel_permutation_fibre_bound(inputs, targets),
+        fibre_bound=tensor_channel_permutation_fibre_bound(
+            audit_inputs, audit_targets
+        ),
         optimizer=str(optimizer),
         steps=count,
+        numerical_dtype=str(audit_dtype),
         records=tuple(records),
         final_model_delta_difference=_tuple_difference(left_delta, right_delta),
     )
