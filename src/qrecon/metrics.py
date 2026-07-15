@@ -24,6 +24,31 @@ class BatchAlignmentReport:
         return payload
 
 
+@dataclass(frozen=True)
+class ChannelAlignmentReport:
+    """Exact small-channel assignment report for anonymous multivariate records."""
+
+    assignment: tuple[int, ...]
+    assignment_total_mse: float
+    assignment_mean_mse: float
+    exact_tensor_within_tolerance: bool
+    channel_success_count: int
+    channel_success_rate: float
+    tolerance: float
+    aligned_metrics: dict[str, float]
+
+    @property
+    def identity_assignment(self) -> bool:
+        return self.assignment == tuple(range(len(self.assignment)))
+
+    def to_dict(self) -> dict[str, object]:
+        payload = asdict(self)
+        payload["assignment"] = list(self.assignment)
+        payload["identity_assignment"] = self.identity_assignment
+        payload["aligned_metrics"] = dict(self.aligned_metrics)
+        return payload
+
+
 def reconstruction_metrics(
     reference: torch.Tensor, estimate: torch.Tensor, mode: str | None = None
 ) -> dict[str, float]:
@@ -82,8 +107,8 @@ def _minimum_cost_assignment(cost: torch.Tensor) -> tuple[float, tuple[int, ...]
         raise ValueError("cost must be non-empty")
     if size > 12:
         raise ValueError(
-            "exact permutation-invariant alignment is limited to batch size 12; "
-            "use smaller attack batches or add a declared approximate matcher"
+            "exact permutation-invariant alignment is limited to size 12; "
+            "use a smaller object or add a declared approximate matcher"
         )
 
     # mask -> (cost, assignment for reference rows processed so far)
@@ -150,6 +175,57 @@ def permutation_invariant_batch_metrics(
         exact_batch_within_tolerance=bool(record_success.all()),
         record_success_count=successes,
         record_success_rate=successes / batch,
+        tolerance=float(tolerance),
+        aligned_metrics=reconstruction_metrics(ref, aligned, mode=mode),
+    )
+
+
+def permutation_invariant_channel_metrics(
+    reference: torch.Tensor,
+    estimate: torch.Tensor,
+    *,
+    mode: str | None = "timeseries",
+    tolerance: float = 1e-2,
+) -> ChannelAlignmentReport:
+    """Evaluate a multivariate object modulo one global channel permutation.
+
+    Inputs must use ``[..., time, channels]`` semantics, such as
+    ``[batch, time, channels]``. The same assignment is applied to every batch and
+    time coordinate, matching the anonymous-channel orbit used by Q-RECON's
+    identifiability theorem. The assignment is selected by the complete supplied
+    private object; callers should concatenate context and target time axes when
+    both are part of the recovery target.
+    """
+
+    if reference.shape != estimate.shape:
+        raise ValueError("reference and estimate must have identical shapes")
+    if reference.ndim < 2:
+        raise ValueError("channel alignment requires a trailing channel dimension")
+    if not math.isfinite(float(tolerance)) or tolerance < 0.0:
+        raise ValueError("tolerance must be finite and non-negative")
+
+    ref = reference.detach().float()
+    est = estimate.detach().float()
+    channels = int(ref.shape[-1])
+    if channels <= 0:
+        raise ValueError("channel dimension must be non-empty")
+    ref_channels = ref.movedim(-1, 0).reshape(channels, -1)
+    est_channels = est.movedim(-1, 0).reshape(channels, -1)
+    cost = (
+        ref_channels[:, None, :] - est_channels[None, :, :]
+    ).square().mean(dim=-1)
+    total_cost, assignment = _minimum_cost_assignment(cost)
+    aligned = est[..., list(assignment)]
+    absolute_error = (ref - aligned).abs().movedim(-1, 0).reshape(channels, -1)
+    channel_success = absolute_error.max(dim=1).values <= float(tolerance)
+    successes = int(channel_success.sum())
+    return ChannelAlignmentReport(
+        assignment=assignment,
+        assignment_total_mse=float(total_cost),
+        assignment_mean_mse=float(total_cost / channels),
+        exact_tensor_within_tolerance=bool(channel_success.all()),
+        channel_success_count=successes,
+        channel_success_rate=successes / channels,
         tolerance=float(tolerance),
         aligned_metrics=reconstruction_metrics(ref, aligned, mode=mode),
     )
