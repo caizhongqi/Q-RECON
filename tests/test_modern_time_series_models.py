@@ -7,6 +7,7 @@ from qrecon.experiment import _build_model
 from qrecon.models import (
     ITransformer,
     PatchTST,
+    RevIN,
     TransformerForecaster,
     build_forecasting_model,
     patchtst_geometry,
@@ -77,6 +78,36 @@ def test_forecasting_factory_builds_configured_architectures(architecture: str):
     model = build_forecasting_model(8, 2, 3, config)
     prediction = model(torch.randn(2, 8, 3))
     assert prediction.shape == (2, 2, 3)
+
+
+def test_factory_installs_parameter_free_revin_when_declared():
+    model = build_forecasting_model(
+        8,
+        2,
+        3,
+        {
+            "architecture": "itransformer",
+            "d_model": 8,
+            "n_heads": 2,
+            "e_layers": 1,
+            "d_ff": 16,
+            "dropout": 0.0,
+            "revin": True,
+            "revin_affine": False,
+        },
+    )
+    assert isinstance(model.revin, RevIN)
+    assert not model.revin.affine
+    assert tuple(model.revin.parameters()) == ()
+    x = torch.randn(2, 8, 3)
+    permutation = torch.tensor([2, 0, 1])
+    model.eval()
+    assert torch.allclose(
+        model(x[:, :, permutation]),
+        model(x)[:, :, permutation],
+        atol=1e-6,
+        rtol=0,
+    )
 
 
 def test_patchtst_and_itransformer_are_channel_permutation_equivariant():
