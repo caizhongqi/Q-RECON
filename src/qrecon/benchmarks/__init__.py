@@ -4,6 +4,11 @@ from .candidate_loading import (
     EmpiricalCandidateLoadingReport,
     empirical_candidate_loading_report,
 )
+from .channel_permutation_fibre import (
+    ChannelPermutationFibrePoint,
+    ChannelPermutationFibreReport,
+    run_channel_permutation_fibre_benchmark,
+)
 from .empirical_batch_gradient import (
     EmpiricalBatchGradientFailure,
     EmpiricalBatchGradientPoint,
@@ -112,6 +117,8 @@ __all__ = [
     "BenchmarkQualityGate",
     "BenchmarkRunRecord",
     "CandidateQuantizationSpec",
+    "ChannelPermutationFibrePoint",
+    "ChannelPermutationFibreReport",
     "CollapsedFixedPointMLPBenchmarkResult",
     "ConfidenceInterval",
     "EmpiricalBatchGradientFailure",
@@ -170,6 +177,7 @@ __all__ = [
     "fit_loglog_scaling",
     "load_modern_timeseries_manifest",
     "load_real_candidate_set",
+    "run_channel_permutation_fibre_benchmark",
     "run_final_head_orbit_benchmark",
     "run_fixed_point_mlp_benchmark",
     "run_fixed_point_mlp_benchmark_matrix",
