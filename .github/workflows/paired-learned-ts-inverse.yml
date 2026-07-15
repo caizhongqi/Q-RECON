@@ -12,6 +12,16 @@ on:
       - "src/qrecon/benchmarks/paired_learned_ts_inverse.py"
       - "src/qrecon/benchmarks/modern_timeseries_reconstruction.py"
       - "src/qrecon/models/**"
+  pull_request:
+    paths:
+      - ".github/workflows/paired-learned-ts-inverse.yml"
+      - "examples/gifteval_patchtst_paired_learned_publication.py"
+      - "src/qrecon/attacks/learned_quantile_initializer.py"
+      - "src/qrecon/attacks/ts_inverse_style.py"
+      - "src/qrecon/benchmarks/learned_ts_inverse.py"
+      - "src/qrecon/benchmarks/paired_learned_ts_inverse.py"
+      - "src/qrecon/benchmarks/modern_timeseries_reconstruction.py"
+      - "src/qrecon/models/**"
   workflow_dispatch:
 
 concurrency:
