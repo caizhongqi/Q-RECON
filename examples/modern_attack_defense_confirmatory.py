@@ -49,9 +49,10 @@ def _manifest() -> ModernTimeSeriesAttackManifest:
             "steps": 150,
             "optimizer": "adam",
             "learning_rate": 0.03,
-            # The release/defense matrix uses the strongest currently completed
-            # objective family. Attack-suite variants override this field.
-            "match_mode": "l1",
+            # Release-aware inversion supports the same declared objective family as
+            # GradientInversionAttack. The confirmatory attack matrix showed hybrid
+            # had the best mean MSE among DLG/InvG/Q-RECON variants on this split.
+            "match_mode": "hybrid",
             "layer_weighting": "parameter",
             "regularization": 0.0,
             "gradient_clip_norm": 10.0,
