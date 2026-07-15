@@ -1,6 +1,7 @@
 import pytest
 import torch
 
+from qrecon.attacks.gradient_inversion import _regularizer
 from qrecon.data import synthetic_multivariate_forecasting
 from qrecon.experiment import _build_model
 from qrecon.models import (
@@ -139,6 +140,15 @@ def test_multivariate_generator_and_experiment_builder_are_wired():
     )
     assert isinstance(model, ITransformer)
     assert model(x).shape == y.shape
+
+
+def test_multivariate_timeseries_regularizer_uses_the_time_axis():
+    series = torch.tensor(
+        [[[0.0, 0.0], [1.0, 10.0], [2.0, 20.0]]]
+    )
+    # Temporal differences are [1, 10] at both transitions, so the mean
+    # squared difference is (1 + 100 + 1 + 100) / 4 = 50.5.
+    assert _regularizer(series, "timeseries") == pytest.approx(50.5)
 
 
 def test_univariate_mlp_is_rejected_for_multivariate_data():
