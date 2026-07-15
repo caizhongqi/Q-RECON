@@ -59,18 +59,23 @@ def test_univariate_patchtst_head_has_no_sample_index_orbit():
     assert point.effective_samples == 1
     assert point.orthogonal_complement_dimension == 0
     assert not point.has_nontrivial_collision
+    assert point.collision_kind is None
     assert point.continuous_orbit_dimension == 0
 
 
-def test_multivariate_itransformer_head_has_exact_gradient_collision():
-    report = run_final_head_orbit_benchmark(_manifest("itransformer", 4))
+def test_multivariate_itransformer_head_has_exact_continuous_gradient_collision():
+    # With five variables and a two-output horizon, the [1,Y] constraint has rank
+    # at most three, leaving a complement of dimension at least two. A genuine
+    # continuous rotation is therefore available rather than only a reflection.
+    report = run_final_head_orbit_benchmark(_manifest("itransformer", 5))
     point = report.points[0]
-    assert point.effective_samples == 4
+    assert point.effective_samples == 5
     assert point.output_dimension == 2
-    assert point.orthogonal_complement_dimension >= 1
+    assert point.orthogonal_complement_dimension >= 2
     assert point.has_nontrivial_collision
     assert point.has_continuous_family
     assert point.continuous_orbit_dimension > 0
+    assert point.collision_kind == "continuous_rotation"
     assert point.collision_input_displacement is not None
     assert point.collision_input_displacement > 0.0
     assert point.collision_statistic_error is not None
