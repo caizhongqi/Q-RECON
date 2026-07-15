@@ -30,6 +30,12 @@ from .channel_permutation import (
     tensor_channel_permutation_fibre_bound,
     validate_channel_permutation,
 )
+from .channel_permutation_training import (
+    ChannelPermutationTrainingStep,
+    ChannelPermutationTrainingTranscriptWitness,
+    TensorTupleDifference,
+    channel_permutation_training_transcript_witness,
+)
 from .costs import (
     AlgorithmCost,
     CostComparison,
@@ -157,6 +163,8 @@ __all__ = [
     "BatchCollisionReport",
     "ChannelPermutationFibreBound",
     "ChannelPermutationGradientWitness",
+    "ChannelPermutationTrainingStep",
+    "ChannelPermutationTrainingTranscriptWitness",
     "CostComparison",
     "ExplicitLookupAmortizationReport",
     "ExplicitLookupDescription",
@@ -179,6 +187,7 @@ __all__ = [
     "PhysicalProbeLowerBoundWitness",
     "PositiveIntegerWorkloadRegion",
     "SearchComparison",
+    "TensorTupleDifference",
     "TypicalLookupCircuitLowerBound",
     "UniformGradientQueryDifferenceBound",
     "adaptive_gaussian_transcript_success_upper_bound",
@@ -200,6 +209,7 @@ __all__ = [
     "channel_permutation_fibre_bound",
     "channel_permutation_gradient_witness",
     "channel_permutation_orbit_size",
+    "channel_permutation_training_transcript_witness",
     "classical_queries_for_success",
     "classical_success_without_replacement",
     "combine_head_perturbation_bounds",
