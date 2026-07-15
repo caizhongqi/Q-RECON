@@ -117,14 +117,41 @@ negative evidence against presenting one calibration count as a universal
 side-information threshold, but it is not a proof that a stronger attacker could
 not exploit larger or different public metadata.
 
+## Symmetry-breaking controls
+
+Workflow run `29415391160` completed the independent control matrix. Artifact
+`8342895288` has digest:
+
+```text
+sha256:adc8353724e5c5791f3509e4bf31f42fc55eae1948ec7c78bcdfe66248359492
+```
+
+Each variant was trained on the same locked source and evaluated on 20 private
+windows using the same nonidentity cyclic channel permutation.
+
+| variant | expected symmetry | observed outcome | mean relative gradient discrepancy | maximum relative gradient discrepancy |
+|---|---|---|---:|---:|
+| shared iTransformer, non-affine RevIN | invariant | 20/20 collisions | `2.09e-7` | `3.68e-7` |
+| shared-head PatchTST, non-affine RevIN | invariant | 20/20 collisions | `2.14e-7` | `5.20e-7` |
+| iTransformer with affine per-channel RevIN | broken | 20/20 breaks | `0.1965` | `0.3983` |
+| PatchTST with channel-specific heads | broken | 20/20 breaks | `1.0902` | `1.4339` |
+
+The affine-RevIN control has mean maximum gradient-tensor difference `1.1176`;
+the channel-specific-head control has mean maximum gradient-tensor difference
+`0.8414`. Their prediction equivariance errors are also macroscopic: `0.02085`
+and `1.3169`, respectively. The controls demonstrate that the fibre certificate
+is sensitive to the exact architecture declaration rather than accepting every
+multivariate Transformer by construction.
+
 ## Combined evidence consequence
 
 The previous ETT evidence contains 220 real-data fibre points. This independent
 UCI experiment adds 40 more, bringing the current total to 260 real-data fibre
 points across five source files, two modern forecasting families, short and
 long-context settings, release postprocessing, optimizer-transcript tests and
-side-information studies. The additional calibration sweep contributes 700
-fixed-evaluation side-information trials.
+side-information studies. The calibration sweep contributes 700 fixed-evaluation
+side-information trials, and the UCI control study contributes 80 additional
+architecture-sensitivity points.
 
 The UCI result strengthens external validity; it does not change the theorem's
 threat model. The central claim remains conditional on private semantic channel
