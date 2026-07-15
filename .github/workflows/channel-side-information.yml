@@ -9,6 +9,13 @@ on:
       - "tests/test_channel_side_information.py"
       - "examples/ett_channel_side_information_phase_diagram.py"
       - "docs/CHANNEL_SIDE_INFORMATION_PHASE_DIAGRAM.md"
+  pull_request:
+    paths:
+      - ".github/workflows/channel-side-information.yml"
+      - "src/qrecon/theory/channel_side_information.py"
+      - "tests/test_channel_side_information.py"
+      - "examples/ett_channel_side_information_phase_diagram.py"
+      - "docs/CHANNEL_SIDE_INFORMATION_PHASE_DIAGRAM.md"
   workflow_dispatch:
 
 concurrency:
