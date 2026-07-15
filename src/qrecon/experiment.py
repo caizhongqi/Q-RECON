@@ -20,12 +20,13 @@ from .data import (
     load_community_forensics,
     load_gifteval,
     load_image_folder,
+    load_multivariate_csv,
     load_time_repository,
     synthetic_forecasting,
     synthetic_multivariate_forecasting,
 )
 from .identifiability import gradient_jacobian_report
-from .metrics import reconstruction_metrics
+from .metrics import permutation_invariant_batch_metrics, reconstruction_metrics
 from .models import ImageMLP, SmallLeNet, TinyConvNet, build_forecasting_model
 from .quantum import ClassicalPrior, DirectPrior, QuantumPrior, quantum_resource_estimate
 
@@ -62,6 +63,16 @@ def _load_dataset(config: dict[str, Any]) -> tuple[TensorDataset, str, str]:
             streaming=dataset.get("streaming", True),
             split=dataset.get("split", "train"),
             revision=dataset.get("revision"),
+        ), "forecasting", "timeseries"
+    if name == "multivariate_csv":
+        return load_multivariate_csv(
+            dataset["path"],
+            context=dataset["context"],
+            horizon=dataset["horizon"],
+            max_windows=dataset.get("max_samples", 128),
+            stride=dataset.get("stride", 1),
+            start=dataset.get("start", 0),
+            columns=dataset.get("columns"),
         ), "forecasting", "timeseries"
     if name == "time_2026":
         return load_time_repository(
@@ -190,15 +201,29 @@ def run_experiment(config: dict[str, Any]) -> dict[str, Any]:
     model = _build_model(dataset, task, victim_config)
     _train(model, dataset, task, config.get("training", {}))
 
-    true_x, true_target = (tensor[:1].clone() for tensor in dataset.tensors)
-    observed = leak_gradients(model, true_x, true_target, task)
     attack_config = config.get("attack", {})
+    sample_index = int(attack_config.get("sample_index", 0))
+    attack_batch_size = int(attack_config.get("batch_size", 1))
+    if sample_index < 0 or attack_batch_size <= 0:
+        raise ValueError("attack sample_index must be non-negative and batch_size positive")
+    if sample_index + attack_batch_size > len(dataset.tensors[0]):
+        raise ValueError("declared attack slice exceeds the loaded dataset")
+    true_x, true_target = (
+        tensor[sample_index : sample_index + attack_batch_size].clone()
+        for tensor in dataset.tensors
+    )
+    observed = leak_gradients(model, true_x, true_target, task)
     known_target = true_target if attack_config.get("known_target", True) else None
     if known_target is None and task == "classification":
+        if attack_batch_size != 1:
+            raise ValueError("automatic classification-label inference requires batch size one")
         known_target = infer_class_label_from_last_bias(model, observed)
 
+    optimization: dict[str, float | int] | None = None
     method = attack_config.get("method", "gradient_matching")
     if method == "analytic_linear":
+        if attack_batch_size != 1:
+            raise ValueError("analytic first-linear recovery requires batch size one")
         reconstruction = invert_first_linear_gradient(
             model, observed, tuple(true_x.shape)
         )
@@ -229,15 +254,29 @@ def run_experiment(config: dict[str, Any]) -> dict[str, Any]:
             learning_rate=attack_config.get("learning_rate", 0.05),
             regularization=attack_config.get("regularization", 1e-3),
             optimizer_name=attack_config.get("optimizer", "adam"),
+            match_mode=attack_config.get("match_mode", "hybrid"),
+            layer_weighting=attack_config.get("layer_weighting", "parameter"),
+            gradient_clip_norm=attack_config.get("gradient_clip_norm"),
+            record_every=attack_config.get("record_every"),
         )
         result = attack.run()
         reconstruction = result.reconstruction
         reconstructed_target = result.reconstructed_target
         history = result.history
+        optimization = {
+            "best_objective": result.best_objective,
+            "best_gradient_match": result.best_gradient_match,
+            "best_step": result.best_step,
+            "final_objective": result.final_objective,
+            "final_gradient_match": result.final_gradient_match,
+        }
 
     report: dict[str, Any] = {
         "dataset": config["dataset"]["name"],
         "task": task,
+        "sample_indices": list(
+            range(sample_index, sample_index + attack_batch_size)
+        ),
         "victim": {
             "class": type(model).__name__,
             "architecture": victim_config.get(
@@ -253,8 +292,18 @@ def run_experiment(config: dict[str, Any]) -> dict[str, Any]:
             attack_config.get("prior") if method != "analytic_linear" else None
         ),
         "metrics": reconstruction_metrics(true_x, reconstruction, mode=mode),
+        "optimization": optimization,
         "history": history,
     }
+    if attack_batch_size > 1:
+        report["permutation_invariant_batch_metrics"] = (
+            permutation_invariant_batch_metrics(
+                true_x,
+                reconstruction,
+                mode=mode,
+                tolerance=float(attack_config.get("exact_tolerance", 1e-2)),
+            ).to_dict()
+        )
     max_identifiability_dim = config.get("identifiability", {}).get(
         "max_input_dimension", 256
     )
