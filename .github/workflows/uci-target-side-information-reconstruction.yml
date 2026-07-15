@@ -1,93 +1,32 @@
-name: uci-appliances-multivariate-reconstruction
+name: uci-target-side-information-reconstruction
 
 on:
+  push:
+    branches: ["agent/uci-target-side-information"]
+    paths:
+      - "examples/uci_appliances_target_side_information_reconstruction.py"
+      - ".github/workflows/uci-target-side-information-reconstruction.yml"
   pull_request:
     paths:
-      - "scripts/fetch_uci_appliances.py"
-      - "examples/uci_appliances_multivariate_reconstruction.py"
       - "examples/uci_appliances_target_side_information_reconstruction.py"
-      - "src/qrecon/attacks/**"
-      - "src/qrecon/metrics.py"
-      - "src/qrecon/data/**"
-      - "src/qrecon/models/**"
-      - ".github/workflows/uci-appliances-multivariate-reconstruction.yml"
+      - ".github/workflows/uci-target-side-information-reconstruction.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: uci-target-side-information-${{ github.ref }}-${{ matrix.architecture }}
+  cancel-in-progress: true
+
 jobs:
   reconstruct:
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        architecture: [itransformer, patchtst]
-    concurrency:
-      group: uci-appliances-reconstruction-${{ github.event.pull_request.number || github.ref }}-${{ matrix.architecture }}
-      cancel-in-progress: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install Q-RECON
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e '.[test]'
-      - name: Download and verify immutable UCI source
-        run: |
-          mkdir -p outputs
-          python scripts/fetch_uci_appliances.py \
-            --output-dir data/UCI-appliances \
-            --manifest outputs/uci-appliances-source.json
-      - name: Verify channel-alignment metrics
-        run: pytest -q tests/test_channel_alignment_metrics.py
-      - name: Run orbit-aware multivariate reconstruction
-        run: |
-          python examples/uci_appliances_multivariate_reconstruction.py \
-            --architecture ${{ matrix.architecture }} \
-            > outputs/uci-appliances-reconstruction-${{ matrix.architecture }}.json \
-            2> outputs/uci-appliances-reconstruction-${{ matrix.architecture }}.stderr
-      - name: Enforce reconstruction completeness gate
-        run: |
-          ARCHITECTURE='${{ matrix.architecture }}' python - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-          architecture = os.environ["ARCHITECTURE"]
-          payload = json.loads(
-              Path(
-                  f"outputs/uci-appliances-reconstruction-{architecture}.json"
-              ).read_text()
-          )
-          assert payload["quality_gate"]["passed"] is True
-          assert payload["quality_gate"]["all_sixty_attempts_completed"] is True
-          assert payload["quality_gate"]["every_record_has_selected_attempt"] is True
-          assert payload["attack_contract"]["known_target"] is False
-          print(json.dumps(payload["summary"], indent=2, sort_keys=True))
-          PY
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: uci-appliances-multivariate-reconstruction-${{ matrix.architecture }}
-          path: |
-            outputs/uci-appliances-source.json
-            outputs/uci-appliances-reconstruction-${{ matrix.architecture }}.json
-            outputs/uci-appliances-reconstruction-${{ matrix.architecture }}.stderr
-          if-no-files-found: error
-
-  target-side-information:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
         architecture: [itransformer, patchtst]
-    concurrency:
-      group: uci-target-side-information-${{ github.event.pull_request.number || github.ref }}-${{ matrix.architecture }}
-      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
