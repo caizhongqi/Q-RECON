@@ -15,7 +15,7 @@ from qrecon.oracles.fixed_point_inversion import (
     solve_fixed_point_mlp_exact_output,
 )
 from qrecon.oracles.models import QuantizedAffineLayer
-from qrecon.theory.unknown_k import certify_bbht_uniform_success
+from qrecon.theory.unknown_k_staged import certify_staged_bbht_uniform_success
 
 
 @dataclass(frozen=True)
@@ -214,18 +214,33 @@ def build_fixed_point_mlp_instance(
     )
 
 
-def _bbht_payload(config: FixedPointMLPBenchmarkConfig) -> dict[str, object] | None:
+def _bbht_payload(
+    config: FixedPointMLPBenchmarkConfig,
+    *,
+    target_success: float | None = None,
+    growth_factor: float = 8.0 / 7.0,
+    attempts_per_stage: int = 1,
+    max_stages: int | None = None,
+) -> dict[str, object] | None:
     population = config.full_word_population
     if population > config.max_exact_population:
         return None
-    certificate = certify_bbht_uniform_success(
+    target = config.target_success if target_success is None else float(target_success)
+    stages = 256 if max_stages is None else int(max_stages)
+    certificate = certify_staged_bbht_uniform_success(
         population,
-        config.target_success,
+        target,
+        growth_factor=growth_factor,
+        attempts_per_stage=attempts_per_stage,
+        max_stages=stages,
         max_exact_population=config.max_exact_population,
     )
     return {
         "minimum_marked": certificate.minimum_marked,
         "target_success": certificate.target_success,
+        "growth_factor": float(growth_factor),
+        "attempts_per_stage": int(attempts_per_stage),
+        "maximum_stages": stages,
         "windows": list(certificate.schedule.windows),
         "rounds": certificate.schedule.rounds,
         "certified_minimum_success": certificate.certified_minimum_success,
@@ -248,6 +263,10 @@ def run_fixed_point_mlp_benchmark(
     *,
     use_z3: bool = False,
     z3_timeout_ms: int | None = None,
+    target_success: float | None = None,
+    bbht_growth_factor: float = 8.0 / 7.0,
+    bbht_attempts_per_stage: int = 1,
+    bbht_max_stages: int | None = None,
 ) -> FixedPointMLPBenchmarkResult:
     """Run matched BnB, optional SMT, domain oracle, and search audit."""
 
@@ -322,7 +341,13 @@ def run_fixed_point_mlp_benchmark(
         oracle_resources=oracle.resource_estimate(phase_kickback=True).to_dict(),
         oracle_basis_permutation_verified=basis_verified,
         classical_oracle_solution_sets_match=branch_words == oracle_words,
-        bbht_certificate=_bbht_payload(config),
+        bbht_certificate=_bbht_payload(
+            config,
+            target_success=target_success,
+            growth_factor=bbht_growth_factor,
+            attempts_per_stage=bbht_attempts_per_stage,
+            max_stages=bbht_max_stages,
+        ),
         z3_report=z3_report,
         z3_seconds=z3_seconds,
         branch_and_bound_z3_solution_sets_match=z3_match,
