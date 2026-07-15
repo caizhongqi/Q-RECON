@@ -2,11 +2,53 @@ name: tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, "agent/**"]
   pull_request:
+
+# This workflow is deliberately fast and follows only the newest branch head.
+# Long real-data studies run in dedicated, non-cancelling publication workflows.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Run complete test suite
+        run: pytest -q --junitxml=pytest-results-${{ matrix.python-version }}.xml
+      - name: Run fast executable contract checks
+        run: |
+          python examples/theory_bounds.py > theory-bounds-${{ matrix.python-version }}.txt
+          python examples/coherent_oracle_demo.py > coherent-oracle-${{ matrix.python-version }}.json
+          python examples/modern_timeseries_reconstruction_matrix.py > modern-timeseries-reconstruction-${{ matrix.python-version }}.json
+      - name: Compile Python sources
+        if: always()
+        run: python -m compileall -q src tests examples scripts
+      - name: Upload quick-validation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quick-validation-${{ matrix.python-version }}
+          path: |
+            pytest-results-${{ matrix.python-version }}.xml
+            theory-bounds-${{ matrix.python-version }}.txt
+            coherent-oracle-${{ matrix.python-version }}.json
+            modern-timeseries-reconstruction-${{ matrix.python-version }}.json
+          if-no-files-found: warn
+
+  solver-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,7 +57,67 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: python -m pip install --upgrade pip
-      - run: pip install -e '.[test]'
-      - run: pytest -q
-      - run: python -m compileall -q src tests
+      - run: pip install -e '.[solver,test]'
+      - name: Run exact SMT baseline tests
+        run: |
+          pytest -q \
+            tests/test_z3_fixed_point_inversion.py \
+            tests/test_z3_deep_fixed_point_inversion.py \
+            tests/test_z3_benchmark.py \
+            --junitxml=z3-results.xml
+      - name: Cross-check one two-layer and one deep solver instance
+        run: |
+          set -o pipefail
+          python examples/z3_fixed_point_inversion.py \
+            > z3-fixed-point-inversion.json \
+            2> >(tee z3-fixed-point-inversion.stderr >&2)
+          python examples/z3_deep_fixed_point_inversion.py \
+            > z3-deep-fixed-point-inversion.json \
+            2> >(tee z3-deep-fixed-point-inversion.stderr >&2)
+      - name: Upload SMT validation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: z3-quick-validation
+          path: |
+            z3-results.xml
+            z3-fixed-point-inversion.json
+            z3-fixed-point-inversion.stderr
+            z3-deep-fixed-point-inversion.json
+            z3-deep-fixed-point-inversion.stderr
+          if-no-files-found: warn
 
+  quantum-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[quantum,test]'
+      - name: Run differentiable quantum-prior smoke test
+        run: |
+          python - <<'PY'
+          import torch
+          from qrecon.quantum import QuantumPrior
+
+          torch.manual_seed(11)
+          prior = QuantumPrior(
+              shape=(1, 2),
+              mode="timeseries",
+              n_qubits=2,
+              layers=1,
+              hidden=4,
+              shots=None,
+          )
+          output = prior()
+          assert output.shape == (1, 2)
+          loss = output.square().mean()
+          loss.backward()
+          gradients = [parameter.grad for parameter in prior.parameters()]
+          assert gradients and all(gradient is not None for gradient in gradients)
+          assert all(torch.isfinite(gradient).all() for gradient in gradients)
+          print("quantum prior forward/backward smoke test passed")
+          PY

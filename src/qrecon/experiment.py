@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from .attacks import (
     GradientInversionAttack,
+    HeadRepresentationInversionAttack,
     infer_class_label_from_last_bias,
     invert_first_linear_gradient,
     leak_gradients,
@@ -20,12 +21,14 @@ from .data import (
     load_community_forensics,
     load_gifteval,
     load_image_folder,
+    load_multivariate_csv,
     load_time_repository,
     synthetic_forecasting,
+    synthetic_multivariate_forecasting,
 )
 from .identifiability import gradient_jacobian_report
-from .metrics import reconstruction_metrics
-from .models import ForecastMLP, ImageMLP, SmallLeNet, TinyConvNet
+from .metrics import permutation_invariant_batch_metrics, reconstruction_metrics
+from .models import ImageMLP, SmallLeNet, TinyConvNet, build_forecasting_model
 from .quantum import ClassicalPrior, DirectPrior, QuantumPrior, quantum_resource_estimate
 
 
@@ -45,16 +48,39 @@ def _load_dataset(config: dict[str, Any]) -> tuple[TensorDataset, str, str]:
             horizon=dataset["horizon"],
             seed=config.get("seed", 7),
         ), "forecasting", "timeseries"
+    if name == "synthetic_multivariate_time":
+        return synthetic_multivariate_forecasting(
+            samples=dataset.get("max_samples", 32),
+            context=dataset["context"],
+            horizon=dataset["horizon"],
+            channels=dataset.get("channels", 7),
+            seed=config.get("seed", 7),
+        ), "forecasting", "timeseries"
     if name == "gift_eval":
         return load_gifteval(
             max_series=dataset.get("max_samples", 128),
             context=dataset["context"],
             horizon=dataset["horizon"],
             streaming=dataset.get("streaming", True),
+            split=dataset.get("split", "train"),
+            revision=dataset.get("revision"),
+        ), "forecasting", "timeseries"
+    if name == "multivariate_csv":
+        return load_multivariate_csv(
+            dataset["path"],
+            context=dataset["context"],
+            horizon=dataset["horizon"],
+            max_windows=dataset.get("max_samples", 128),
+            stride=dataset.get("stride", 1),
+            start=dataset.get("start", 0),
+            columns=dataset.get("columns"),
         ), "forecasting", "timeseries"
     if name == "time_2026":
         return load_time_repository(
-            dataset["root"], dataset.get("max_samples", 128), dataset["context"], dataset["horizon"]
+            dataset["root"],
+            dataset.get("max_samples", 128),
+            dataset["context"],
+            dataset["horizon"],
         ), "forecasting", "timeseries"
     if name == "community_forensics_small":
         return load_community_forensics(
@@ -66,33 +92,84 @@ def _load_dataset(config: dict[str, Any]) -> tuple[TensorDataset, str, str]:
             real_offset=dataset.get("real_offset", 9000),
         ), "classification", "image"
     if name == "image_folder":
-        return load_image_folder(dataset["root"], dataset.get("image_size", 32)), "classification", "image"
+        return load_image_folder(
+            dataset["root"], dataset.get("image_size", 32)
+        ), "classification", "image"
     raise ValueError(f"unknown dataset: {name}")
+
+
+def _forecast_dimensions(dataset: TensorDataset) -> tuple[int, int, int]:
+    x, y = dataset.tensors
+    if x.ndim == 2:
+        if y.ndim != 2:
+            raise ValueError(
+                "univariate forecasting targets must have shape [samples, horizon]"
+            )
+        return int(x.shape[1]), int(y.shape[1]), 1
+    if x.ndim == 3:
+        if y.ndim != 3:
+            raise ValueError(
+                "multivariate forecasting targets must have shape "
+                "[samples, horizon, channels]"
+            )
+        if x.shape[2] != y.shape[2]:
+            raise ValueError("forecast input and target channel counts must match")
+        return int(x.shape[1]), int(y.shape[1]), int(x.shape[2])
+    raise ValueError(
+        "forecasting inputs must have shape [samples, context] or "
+        "[samples, context, channels]"
+    )
 
 
 def _build_model(dataset: TensorDataset, task: str, config: dict[str, Any]) -> nn.Module:
     x, y = dataset.tensors
     if task == "forecasting":
-        return ForecastMLP(x.shape[-1], y.shape[-1], config.get("hidden", 64))
+        context, horizon, input_channels = _forecast_dimensions(dataset)
+        return build_forecasting_model(context, horizon, input_channels, config)
     classes = max(2, int(y.max().item()) + 1)
-    architecture = config.get("architecture", "cnn")
+    architecture = str(config.get("architecture", "cnn")).lower()
     if architecture == "mlp":
         return ImageMLP(tuple(x.shape[1:]), classes, config.get("hidden", 128))
     if architecture == "lenet":
         return SmallLeNet(tuple(x.shape[1:]), classes, config.get("width", 6))
-    return TinyConvNet(classes, config.get("width", 24))
+    if architecture in {"cnn", "tinyconvnet", "tiny_conv_net"}:
+        return TinyConvNet(classes, config.get("width", 24))
+    raise ValueError(
+        f"unknown image architecture {config.get('architecture')!r}; "
+        "supported architectures: mlp, lenet, cnn"
+    )
 
 
 def _train(model: nn.Module, dataset: TensorDataset, task: str, config: dict[str, Any]) -> None:
-    loader = DataLoader(dataset, batch_size=config.get("batch_size", 16), shuffle=True)
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.get("learning_rate", 1e-3))
-    criterion: nn.Module = nn.CrossEntropyLoss() if task == "classification" else nn.MSELoss()
+    loader = DataLoader(
+        dataset, batch_size=config.get("batch_size", 16), shuffle=True
+    )
+    learning_rate = float(config.get("learning_rate", 1e-3))
+    optimizer_name = str(config.get("optimizer", "adam")).lower()
+    if optimizer_name == "adam":
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    elif optimizer_name == "adamw":
+        optimizer = torch.optim.AdamW(
+            model.parameters(),
+            lr=learning_rate,
+            weight_decay=float(config.get("weight_decay", 1e-2)),
+        )
+    else:
+        raise ValueError("training optimizer must be 'adam' or 'adamw'")
+    criterion: nn.Module = (
+        nn.CrossEntropyLoss() if task == "classification" else nn.MSELoss()
+    )
+    gradient_clip_norm = config.get("gradient_clip_norm")
     model.train()
     for _ in range(config.get("epochs", 5)):
         for x, target in loader:
             optimizer.zero_grad(set_to_none=True)
             loss = criterion(model(x), target)
             loss.backward()
+            if gradient_clip_norm is not None:
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(), float(gradient_clip_norm)
+                )
             optimizer.step()
     model.eval()
 
@@ -121,25 +198,94 @@ def run_experiment(config: dict[str, Any]) -> dict[str, Any]:
     seed = int(config.get("seed", 7))
     _seed_everything(seed)
     dataset, task, mode = _load_dataset(config)
-    model = _build_model(dataset, task, config.get("victim", {}))
+    victim_config = config.get("victim", {})
+    model = _build_model(dataset, task, victim_config)
     _train(model, dataset, task, config.get("training", {}))
 
-    true_x, true_target = (tensor[:1].clone() for tensor in dataset.tensors)
-    observed = leak_gradients(model, true_x, true_target, task)
     attack_config = config.get("attack", {})
+    sample_index = int(attack_config.get("sample_index", 0))
+    attack_batch_size = int(attack_config.get("batch_size", 1))
+    if sample_index < 0 or attack_batch_size <= 0:
+        raise ValueError("attack sample_index must be non-negative and batch_size positive")
+    if sample_index + attack_batch_size > len(dataset.tensors[0]):
+        raise ValueError("declared attack slice exceeds the loaded dataset")
+    true_x, true_target = (
+        tensor[sample_index : sample_index + attack_batch_size].clone()
+        for tensor in dataset.tensors
+    )
+    observed = leak_gradients(model, true_x, true_target, task)
     known_target = true_target if attack_config.get("known_target", True) else None
     if known_target is None and task == "classification":
+        if attack_batch_size != 1:
+            raise ValueError("automatic classification-label inference requires batch size one")
         known_target = infer_class_label_from_last_bias(model, observed)
 
-    method = attack_config.get("method", "gradient_matching")
+    optimization: dict[str, float | int] | None = None
+    head_leakage: dict[str, object] | None = None
+    method = str(attack_config.get("method", "gradient_matching"))
     if method == "analytic_linear":
-        reconstruction = invert_first_linear_gradient(model, observed, tuple(true_x.shape))
+        if attack_batch_size != 1:
+            raise ValueError("analytic first-linear recovery requires batch size one")
+        reconstruction = invert_first_linear_gradient(
+            model, observed, tuple(true_x.shape)
+        )
         reconstructed_target = (
             known_target.detach()
             if known_target is not None
             else torch.full_like(true_target, float("nan"))
         )
-        history = [{"step": 1.0, "objective": 0.0, "gradient_match": 0.0, "regularizer": 0.0}]
+        history = [
+            {
+                "step": 1.0,
+                "objective": 0.0,
+                "gradient_match": 0.0,
+                "regularizer": 0.0,
+            }
+        ]
+    elif method == "head_representation":
+        if task != "forecasting" or attack_batch_size != 1:
+            raise ValueError(
+                "head-representation inversion currently requires forecasting batch size one"
+            )
+        architecture = str(victim_config.get("architecture", "mlp")).lower()
+        if (
+            true_x.ndim == 3
+            and true_x.shape[2] > 1
+            and architecture in {"patchtst", "itransformer"}
+        ):
+            raise ValueError(
+                "multivariate shared-head PatchTST/iTransformer does not expose one "
+                "separable final-head representation"
+            )
+        prior = _prior(tuple(true_x.shape), mode, attack_config)
+        attack = HeadRepresentationInversionAttack(
+            model,
+            observed,
+            prior,
+            mode=mode,
+            effective_samples=1,
+            steps=int(attack_config.get("steps", 300)),
+            learning_rate=float(attack_config.get("learning_rate", 0.05)),
+            regularization=float(attack_config.get("regularization", 0.0)),
+            gradient_clip_norm=attack_config.get("gradient_clip_norm"),
+            record_every=attack_config.get("record_every"),
+        )
+        result = attack.run()
+        reconstruction = result.reconstruction
+        reconstructed_target = (
+            known_target.detach()
+            if known_target is not None
+            else torch.full_like(true_target, float("nan"))
+        )
+        history = list(result.history)
+        optimization = {
+            "best_objective": result.best_objective,
+            "best_representation_loss": result.best_representation_loss,
+            "best_step": result.best_step,
+            "final_objective": result.final_objective,
+            "final_representation_loss": result.final_representation_loss,
+        }
+        head_leakage = result.leakage.to_dict(include_feature=False)
     else:
         prior = _prior(tuple(true_x.shape), mode, attack_config)
         attack = GradientInversionAttack(
@@ -154,28 +300,82 @@ def run_experiment(config: dict[str, Any]) -> dict[str, Any]:
             learning_rate=attack_config.get("learning_rate", 0.05),
             regularization=attack_config.get("regularization", 1e-3),
             optimizer_name=attack_config.get("optimizer", "adam"),
+            match_mode=attack_config.get("match_mode", "hybrid"),
+            layer_weighting=attack_config.get("layer_weighting", "parameter"),
+            gradient_clip_norm=attack_config.get("gradient_clip_norm"),
+            record_every=attack_config.get("record_every"),
+            trend_regularization=attack_config.get("trend_regularization", 0.0),
+            trend_loss=attack_config.get("trend_loss", "l1"),
+            trend_detach=attack_config.get("trend_detach", True),
+            periodicity_regularization=attack_config.get(
+                "periodicity_regularization", 0.0
+            ),
+            periodicity_period=attack_config.get("periodicity_period"),
+            periodicity_loss=attack_config.get("periodicity_loss", "l1"),
+            low_resolution_regularization=attack_config.get(
+                "low_resolution_regularization", 0.0
+            ),
+            low_resolution_factor=attack_config.get("low_resolution_factor", 2),
+            low_resolution_loss=attack_config.get("low_resolution_loss", "l1"),
         )
         result = attack.run()
         reconstruction = result.reconstruction
         reconstructed_target = result.reconstructed_target
         history = result.history
+        optimization = {
+            "best_objective": result.best_objective,
+            "best_gradient_match": result.best_gradient_match,
+            "best_step": result.best_step,
+            "final_objective": result.final_objective,
+            "final_gradient_match": result.final_gradient_match,
+        }
 
     report: dict[str, Any] = {
         "dataset": config["dataset"]["name"],
         "task": task,
+        "sample_indices": list(
+            range(sample_index, sample_index + attack_batch_size)
+        ),
+        "victim": {
+            "class": type(model).__name__,
+            "architecture": victim_config.get(
+                "architecture", "mlp" if task == "forecasting" else "cnn"
+            ),
+            "parameters": sum(
+                parameter.numel() for parameter in model.parameters()
+            ),
+            "config": victim_config,
+        },
         "attack_method": method,
-        "prior": attack_config.get("prior") if method != "analytic_linear" else None,
+        "prior": (
+            attack_config.get("prior") if method != "analytic_linear" else None
+        ),
         "metrics": reconstruction_metrics(true_x, reconstruction, mode=mode),
+        "optimization": optimization,
+        "head_leakage": head_leakage,
         "history": history,
     }
-    max_identifiability_dim = config.get("identifiability", {}).get("max_input_dimension", 256)
+    if attack_batch_size > 1:
+        report["permutation_invariant_batch_metrics"] = (
+            permutation_invariant_batch_metrics(
+                true_x,
+                reconstruction,
+                mode=mode,
+                tolerance=float(attack_config.get("exact_tolerance", 1e-2)),
+            ).to_dict()
+        )
+    max_identifiability_dim = config.get("identifiability", {}).get(
+        "max_input_dimension", 256
+    )
     if true_x.numel() <= max_identifiability_dim:
         report["identifiability"] = gradient_jacobian_report(
             model, true_x, true_target, task
         ).to_dict()
     if attack_config.get("prior") == "quantum" and method != "analytic_linear":
         report["quantum_resources"] = quantum_resource_estimate(
-            attack_config.get("n_qubits", 6), attack_config.get("layers", 2), attack_config.get("shots")
+            attack_config.get("n_qubits", 6),
+            attack_config.get("layers", 2),
+            attack_config.get("shots"),
         )
 
     output_dir = Path(config.get("output_dir", "outputs/latest"))

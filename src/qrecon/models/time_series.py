@@ -18,4 +18,3 @@ class ForecastMLP(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.network(x)
-

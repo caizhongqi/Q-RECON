@@ -1,0 +1,52 @@
+name: modern-attack-defense-confirmatory
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/modern-attack-defense-confirmatory.yml"
+      - "examples/modern_attack_defense_confirmatory.py"
+      - "src/qrecon/attacks/**"
+      - "src/qrecon/benchmarks/modern_timeseries_attack_suite.py"
+      - "src/qrecon/benchmarks/modern_timeseries_defense_suite.py"
+      - "src/qrecon/benchmarks/modern_timeseries_reconstruction.py"
+      - "src/qrecon/data/**"
+      - "src/qrecon/models/**"
+      - "src/qrecon/metrics.py"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  gifteval-patchtst-confirmatory-matrix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Verify modern victim higher-order gradient support
+        run: |
+          pytest -q tests/test_modern_time_series_models.py \
+            --junitxml=modern-attack-defense-tests.xml
+      - name: Run 20-record, three-seed attack and defense matrix
+        run: |
+          set -o pipefail
+          python examples/modern_attack_defense_confirmatory.py \
+            > gifteval-patchtst-attack-defense-confirmatory.json \
+            2> >(tee gifteval-patchtst-attack-defense-confirmatory.stderr >&2)
+      - name: Upload confirmatory matrix
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gifteval-patchtst-attack-defense-confirmatory
+          path: |
+            modern-attack-defense-tests.xml
+            gifteval-patchtst-attack-defense-confirmatory.json
+            gifteval-patchtst-attack-defense-confirmatory.stderr
+          if-no-files-found: error

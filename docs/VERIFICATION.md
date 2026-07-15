@@ -1,17 +1,58 @@
 # Verification record
 
-Verified locally on macOS arm64 with Python 3.12, PyTorch 2.13.0 and
-PennyLane 0.45.1.
+## Continuous integration — 2026-07-14
 
-## Unit tests
+GitHub Actions run `29360446047` validated commit
+`73bb6ee6fb2bc5927931dad2e4cf26f28c3e2871` on Ubuntu with Python 3.10 and 3.12.
+The independent PennyLane job used Python 3.12.
+
+The archived Python 3.12 JUnit report contains:
 
 ```text
-4 passed
+60 tests
+0 failures
+0 errors
+0 skipped
 ```
 
-The tests cover gradient extraction, local Jacobian-rank analysis,
-reconstruction metrics, analytic input recovery, label inference and quantum
-logical-resource estimates.
+All three jobs completed successfully:
+
+- unit tests on Python 3.10;
+- unit tests on Python 3.12;
+- differentiable PennyLane `QuantumPrior` forward/backward smoke test.
+
+Both unit-test jobs also compiled every Python file and executed the public theory
+and compiler examples. The workflow archived machine-readable reports for:
+
+- information/query bounds;
+- finite truth-table oracle synthesis;
+- compiler scaling;
+- structure-preserving Affine cost accounting;
+- reversible MLP search;
+- exact training-gradient reconstruction.
+
+The test suite covers:
+
+- deterministic/noisy Bayes recovery and target equivalence;
+- data processing, conditional min-entropy, Helstrom and privacy bounds;
+- local differential identifiability;
+- aggregate-gradient collision constructions;
+- fixed-point word semantics and range proofs;
+- mixed-polarity minterm and ANF exact oracle synthesis;
+- reversible ripple-carry addition and constant shift-add Affine circuits;
+- exact equality comparators;
+- two-layer and arbitrary-depth reversible ReLU MLPs;
+- shared arithmetic-work liveness;
+- signed variable-by-variable multiplication;
+- finite and structure-preserving training-gradient value/equality/phase oracles;
+- clean ancillas, inverse restoration and basis-permutation checks;
+- Grover success curves driven by compiled phase netlists;
+- end-to-end setup/query/fault-tolerant cost planning.
+
+## Earlier local environment
+
+The first reconstruction prototype was verified locally on macOS arm64 with
+Python 3.12, PyTorch 2.13.0 and PennyLane 0.45.1.
 
 ## Synthetic end-to-end experiment
 
@@ -37,8 +78,9 @@ confidence intervals and end-to-end resource accounting.
 ## Quantum second-order path
 
 A two-qubit, one-layer `QuantumPrior` completed differentiable gradient
-inversion for two optimization steps. This validates second-order derivatives
-through the VQC and victim-gradient matching objective.
+inversion for two optimization steps. The CI smoke test additionally verifies a
+fresh forward pass, scalar loss, backward pass and finite gradients for every
+trainable parameter.
 
 ## Exact batch-one linear-layer recovery
 

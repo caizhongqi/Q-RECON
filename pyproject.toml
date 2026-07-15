@@ -21,6 +21,7 @@ dependencies = [
 
 [project.optional-dependencies]
 quantum = ["pennylane>=0.40"]
+solver = ["z3-solver>=4.13"]
 test = ["pytest>=8.0"]
 
 [project.scripts]
@@ -31,4 +32,3 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

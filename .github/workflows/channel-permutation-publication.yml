@@ -1,0 +1,95 @@
+name: channel-permutation-publication
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/channel-permutation-publication.yml"
+      - "examples/ettm1_itransformer_channel_permutation.py"
+      - "examples/ettm1_channel_permutation_ablation.py"
+      - "examples/ettm1_channel_permutation_training_transcript.py"
+      - "examples/ettm1_channel_permutation_release.py"
+      - "scripts/fetch_pinned_ettm1.py"
+      - "src/qrecon/attacks/gradient_release.py"
+      - "src/qrecon/benchmarks/channel_permutation_fibre.py"
+      - "src/qrecon/benchmarks/channel_permutation_release.py"
+      - "src/qrecon/theory/channel_permutation.py"
+      - "src/qrecon/theory/channel_permutation_training.py"
+      - "src/qrecon/models/**"
+      - "tests/test_channel_permutation_gradient.py"
+      - "tests/test_channel_permutation_ablation.py"
+      - "tests/test_channel_permutation_training.py"
+      - "tests/test_channel_permutation_release.py"
+  workflow_dispatch:
+
+# Publication evidence is immutable per commit. Later branch work must not cancel
+# an already-declared real-data study before its JSON artifacts are archived.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  ettm1-modern-gradient-orbits:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Verify permutation, release, ablation, and optimizer-transcript implementations
+        run: |
+          pytest -q \
+            tests/test_channel_permutation_gradient.py \
+            tests/test_channel_permutation_ablation.py \
+            tests/test_channel_permutation_training.py \
+            tests/test_channel_permutation_release.py \
+            --junitxml=channel-permutation-tests.xml
+      - name: Download and verify immutable ETTm1 data
+        run: |
+          python scripts/fetch_pinned_ettm1.py \
+            --output data/ETT-small/ETTm1.csv \
+            --manifest ettm1-channel-permutation-source.json
+      - name: Certify 20 real iTransformer full-gradient collision fibres
+        run: |
+          set -o pipefail
+          python examples/ettm1_itransformer_channel_permutation.py \
+            > ettm1-itransformer-channel-permutation.json \
+            2> >(tee ettm1-itransformer-channel-permutation.stderr >&2)
+      - name: Run iTransformer, shared PatchTST, and channel-specific-head ablation
+        run: |
+          set -o pipefail
+          python examples/ettm1_channel_permutation_ablation.py \
+            > ettm1-channel-permutation-ablation.json \
+            2> >(tee ettm1-channel-permutation-ablation.stderr >&2)
+      - name: Certify multistep AdamW transcript and model-delta collisions
+        run: |
+          set -o pipefail
+          python examples/ettm1_channel_permutation_training_transcript.py \
+            > ettm1-channel-permutation-training-transcript.json \
+            2> >(tee ettm1-channel-permutation-training-transcript.stderr >&2)
+      - name: Certify clipping, quantization, Gaussian-noise, and partial-release closure
+        run: |
+          set -o pipefail
+          python examples/ettm1_channel_permutation_release.py \
+            > ettm1-channel-permutation-release.json \
+            2> >(tee ettm1-channel-permutation-release.stderr >&2)
+      - name: Upload channel-permutation theorem evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ettm1-channel-permutation-publication
+          path: |
+            channel-permutation-tests.xml
+            ettm1-channel-permutation-source.json
+            ettm1-itransformer-channel-permutation.json
+            ettm1-itransformer-channel-permutation.stderr
+            ettm1-channel-permutation-ablation.json
+            ettm1-channel-permutation-ablation.stderr
+            ettm1-channel-permutation-training-transcript.json
+            ettm1-channel-permutation-training-transcript.stderr
+            ettm1-channel-permutation-release.json
+            ettm1-channel-permutation-release.stderr
+          if-no-files-found: error

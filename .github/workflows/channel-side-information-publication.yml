@@ -1,0 +1,71 @@
+name: channel-side-information-publication
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/channel-side-information-publication.yml"
+      - "examples/ett_channel_side_information_publication.py"
+      - "scripts/fetch_pinned_ett_variants.py"
+      - "src/qrecon/benchmarks/channel_side_information.py"
+      - "src/qrecon/benchmarks/__init__.py"
+      - "src/qrecon/theory/channel_side_information.py"
+      - "tests/test_channel_side_information.py"
+      - "tests/test_channel_side_information_benchmark.py"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  ett-public-calibration-study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Verify side-information bounds and empirical matcher
+        run: |
+          pytest -q \
+            tests/test_channel_side_information.py \
+            tests/test_channel_side_information_benchmark.py \
+            --junitxml=channel-side-information-tests.xml
+      - name: Download and verify immutable ETTm1
+        run: |
+          python scripts/fetch_pinned_ett_variants.py ettm1 \
+            --output data/ETT-small/ETTm1.csv \
+            --manifest ettm1-side-information-source.json
+      - name: Download and verify immutable ETTm2
+        run: |
+          python scripts/fetch_pinned_ett_variants.py ettm2 \
+            --output data/ETT-small/ETTm2.csv \
+            --manifest ettm2-side-information-source.json
+      - name: Download and verify immutable ETTh1
+        run: |
+          python scripts/fetch_pinned_ett_variants.py etth1 \
+            --output data/ETT-small/ETTh1.csv \
+            --manifest etth1-side-information-source.json
+      - name: Run 300-trial public calibration study
+        run: |
+          set -o pipefail
+          python examples/ett_channel_side_information_publication.py \
+            > ett-channel-side-information-publication.json \
+            2> >(tee ett-channel-side-information-publication.stderr >&2)
+      - name: Upload side-information evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ett-channel-side-information-publication
+          path: |
+            channel-side-information-tests.xml
+            ettm1-side-information-source.json
+            ettm2-side-information-source.json
+            etth1-side-information-source.json
+            ett-channel-side-information-publication.json
+            ett-channel-side-information-publication.stderr
+          if-no-files-found: error

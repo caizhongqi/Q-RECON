@@ -1,0 +1,38 @@
+seed: 41
+output_dir: outputs/synthetic_multivariate_itransformer
+
+dataset:
+  name: synthetic_multivariate_time
+  max_samples: 128
+  context: 96
+  horizon: 24
+  channels: 7
+
+victim:
+  architecture: itransformer
+  d_model: 64
+  n_heads: 4
+  e_layers: 2
+  d_ff: 128
+  dropout: 0.1
+  activation: gelu
+  revin: true
+
+training:
+  epochs: 10
+  batch_size: 16
+  optimizer: adamw
+  learning_rate: 0.0005
+  weight_decay: 0.01
+  gradient_clip_norm: 1.0
+
+attack:
+  method: gradient_matching
+  prior: direct
+  known_target: true
+  steps: 100
+  learning_rate: 0.02
+  regularization: 0.001
+
+identifiability:
+  max_input_dimension: 128

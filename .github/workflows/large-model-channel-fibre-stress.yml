@@ -1,0 +1,75 @@
+name: large-model-channel-fibre-stress
+
+on:
+  push:
+    branches: ["agent/**"]
+    paths:
+      - ".github/workflows/large-model-channel-fibre-stress.yml"
+      - "examples/ett_large_model_channel_permutation_stress.py"
+      - "scripts/fetch_pinned_ettm1.py"
+      - "scripts/fetch_pinned_ett_variants.py"
+      - "src/qrecon/benchmarks/channel_permutation_fibre.py"
+      - "src/qrecon/data/**"
+      - "src/qrecon/models/**"
+      - "src/qrecon/theory/channel_permutation.py"
+  pull_request:
+    paths:
+      - ".github/workflows/large-model-channel-fibre-stress.yml"
+      - "examples/ett_large_model_channel_permutation_stress.py"
+      - "scripts/fetch_pinned_ettm1.py"
+      - "scripts/fetch_pinned_ett_variants.py"
+      - "src/qrecon/benchmarks/channel_permutation_fibre.py"
+      - "src/qrecon/data/**"
+      - "src/qrecon/models/**"
+      - "src/qrecon/theory/channel_permutation.py"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  long-context-modern-models:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Download and verify immutable ETTm1
+        run: |
+          python scripts/fetch_pinned_ettm1.py \
+            --output data/ETT-small/ETTm1.csv \
+            --manifest ettm1-source-manifest.json
+      - name: Download and verify immutable ETTm2
+        run: |
+          python scripts/fetch_pinned_ett_variants.py ettm2 \
+            --output data/ETT-small/ETTm2.csv \
+            --manifest ettm2-source-manifest.json
+      - name: Download and verify immutable ETTh1
+        run: |
+          python scripts/fetch_pinned_ett_variants.py etth1 \
+            --output data/ETT-small/ETTh1.csv \
+            --manifest etth1-source-manifest.json
+      - name: Run context-96 horizon-24 fibre stress matrix
+        run: |
+          set -o pipefail
+          python examples/ett_large_model_channel_permutation_stress.py \
+            > ett-large-model-channel-fibre-stress.json \
+            2> >(tee ett-large-model-channel-fibre-stress.stderr >&2)
+      - name: Upload large-model fibre evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ett-large-model-channel-fibre-stress
+          path: |
+            ettm1-source-manifest.json
+            ettm2-source-manifest.json
+            etth1-source-manifest.json
+            ett-large-model-channel-fibre-stress.json
+            ett-large-model-channel-fibre-stress.stderr
+          if-no-files-found: error

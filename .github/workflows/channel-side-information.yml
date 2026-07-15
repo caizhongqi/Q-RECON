@@ -1,0 +1,59 @@
+name: channel-side-information
+
+on:
+  push:
+    branches: ["agent/**"]
+    paths:
+      - ".github/workflows/channel-side-information.yml"
+      - "src/qrecon/theory/channel_side_information.py"
+      - "tests/test_channel_side_information.py"
+      - "examples/ett_channel_side_information_phase_diagram.py"
+      - "docs/CHANNEL_SIDE_INFORMATION_PHASE_DIAGRAM.md"
+  pull_request:
+    paths:
+      - ".github/workflows/channel-side-information.yml"
+      - "src/qrecon/theory/channel_side_information.py"
+      - "tests/test_channel_side_information.py"
+      - "examples/ett_channel_side_information_phase_diagram.py"
+      - "docs/CHANNEL_SIDE_INFORMATION_PHASE_DIAGRAM.md"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  side-information-phase-diagram:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Run exact side-information tests
+        run: pytest -q tests/test_channel_side_information.py --junitxml=channel-side-information-tests.xml
+      - name: Generate ETT side-information report
+        run: python examples/ett_channel_side_information_phase_diagram.py > ett-channel-side-information.json
+      - name: Enforce declared ETT phase diagram
+        run: |
+          python - <<'PY'
+          import json
+          with open("ett-channel-side-information.json", encoding="utf-8") as handle:
+              report = json.load(handle)
+          regimes = report["regimes"]
+          assert regimes["ordered_channel_labels_private"]["residual_orbit_size"] == 5040
+          assert regimes["channel_family_public"]["residual_orbit_size"] == 8
+          assert regimes["full_semantic_labels_public"]["residual_orbit_size"] == 1
+          assert report["recovery_targets"]["modulo_residual_permutation"]["information_theoretic_ceiling"] == 1.0
+          PY
+      - name: Upload side-information evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ett-channel-side-information
+          path: |
+            channel-side-information-tests.xml
+            ett-channel-side-information.json
+          if-no-files-found: error

@@ -37,18 +37,41 @@ def load_community_forensics(
     seed: int = 17,
     sampling: str = "api",
     real_offset: int = 9000,
+    split: str = "train",
+    revision: str | None = None,
 ) -> TensorDataset:
-    """Load the redistributable CVPR 2025 Community Forensics Small set."""
+    """Load the redistributable Community Forensics Small set.
+
+    The lightweight rows-API path is intentionally treated as unversioned. A
+    revision-pinned publication manifest must use ``sampling='datasets'`` so the
+    requested commit SHA is forwarded to Hugging Face Datasets.
+    """
     if sampling == "api":
+        if split != "train":
+            raise ValueError("the rows API adapter currently supports only split='train'")
+        if revision is not None and revision.lower() not in ("", "main", "master"):
+            raise ValueError(
+                "the rows API path is not revision-pinned; use sampling='datasets'"
+            )
         rows = _balanced_community_rows(
             max_images=max_images, seed=seed, real_offset=real_offset
         )
-    else:
+    elif sampling == "datasets":
         from datasets import load_dataset
 
+        kwargs: dict[str, object] = {
+            "split": split,
+            "streaming": streaming,
+        }
+        if revision is not None:
+            kwargs["revision"] = revision
         rows = load_dataset(
-            "OwensLab/CommunityForensics-Small", split="train", streaming=streaming
+            "OwensLab/CommunityForensics-Small",
+            **kwargs,
         )
+    else:
+        raise ValueError("sampling must be 'api' or 'datasets'")
+
     images: list[torch.Tensor] = []
     labels: list[int] = []
     class_limit = (max_images + 1) // 2

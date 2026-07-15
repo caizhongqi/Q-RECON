@@ -1,0 +1,51 @@
+name: ett-source-calibration
+
+on:
+  push:
+    branches: ["agent/**"]
+    paths:
+      - ".github/workflows/ett-source-calibration.yml"
+      - "scripts/fetch_pinned_ett_variants.py"
+  pull_request:
+    paths:
+      - ".github/workflows/ett-source-calibration.yml"
+      - "scripts/fetch_pinned_ett_variants.py"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  calibrate-source-hashes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download and verify ETTm2
+        run: |
+          python scripts/fetch_pinned_ett_variants.py ettm2 \
+            --output data/ETT-small/ETTm2.csv \
+            --manifest ettm2-source-manifest.json
+      - name: Download and verify ETTh1
+        run: |
+          python scripts/fetch_pinned_ett_variants.py etth1 \
+            --output data/ETT-small/ETTh1.csv \
+            --manifest etth1-source-manifest.json
+      - name: Download and verify ETTh2
+        run: |
+          python scripts/fetch_pinned_ett_variants.py etth2 \
+            --output data/ETT-small/ETTh2.csv \
+            --manifest etth2-source-manifest.json
+      - name: Upload immutable source manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: ett-variant-source-manifests
+          path: |
+            ettm2-source-manifest.json
+            etth1-source-manifest.json
+            etth2-source-manifest.json
+          if-no-files-found: error
