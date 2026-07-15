@@ -3,6 +3,7 @@
 from .images import load_community_forensics, load_image_folder
 from .time_series import (
     load_gifteval,
+    load_multivariate_csv,
     load_time_repository,
     synthetic_forecasting,
     synthetic_multivariate_forecasting,
@@ -12,6 +13,7 @@ __all__ = [
     "load_community_forensics",
     "load_gifteval",
     "load_image_folder",
+    "load_multivariate_csv",
     "load_time_repository",
     "synthetic_forecasting",
     "synthetic_multivariate_forecasting",
