@@ -14,19 +14,13 @@ on:
       - "examples/gifteval_patchtst_paired_learned_calibration.py"
       - "tests/test_learned_quantile_initializer.py"
       - "tests/test_paired_learned_ts_inverse.py"
-  pull_request:
-    paths:
-      - ".github/workflows/learned-quantile.yml"
-      - "src/qrecon/attacks/learned_quantile_initializer.py"
-      - "src/qrecon/benchmarks/learned_ts_inverse.py"
-      - "src/qrecon/benchmarks/paired_learned_ts_inverse.py"
-      - "examples/gifteval_patchtst_paired_learned_calibration.py"
-      - "tests/test_learned_quantile_initializer.py"
-      - "tests/test_paired_learned_ts_inverse.py"
+  workflow_dispatch:
 
+# Keep only the newest branch-head calibration. Publication-scale studies have
+# their own dedicated workflows and retain their artifacts separately.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate-and-calibrate:
