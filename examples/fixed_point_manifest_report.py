@@ -71,6 +71,7 @@ def main() -> None:
         bootstrap_seed=20260715,
         minimum_seeds_per_config=minimum_seeds,
         minimum_candidate_scales=3,
+        require_complete_cells=args.publication,
     )
     payload = {
         "protocol": protocol,
@@ -82,7 +83,8 @@ def main() -> None:
             None
             if args.publication
             else "CI smoke validates execution, recording, failure visibility, and hierarchical "
-            "aggregation only. It is not publication-level timing evidence."
+            "aggregation only. It permits incomplete cells so recorded solver failures remain "
+            "visible; it is not publication-level timing evidence."
         ),
     }
     print(json.dumps(payload, indent=2, sort_keys=True))
