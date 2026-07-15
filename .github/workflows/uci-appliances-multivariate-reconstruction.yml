@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/fetch_uci_appliances.py"
       - "examples/uci_appliances_multivariate_reconstruction.py"
+      - "examples/uci_appliances_reconstruction_convergence.py"
       - "src/qrecon/attacks/**"
       - "src/qrecon/metrics.py"
       - "src/qrecon/data/**"
@@ -37,6 +38,7 @@ jobs:
           pip install -e '.[test]'
       - name: Download and verify immutable UCI source
         run: |
+          mkdir -p outputs
           python scripts/fetch_uci_appliances.py \
             --output-dir data/UCI-appliances \
             --manifest outputs/uci-appliances-source.json
@@ -74,4 +76,79 @@ jobs:
             outputs/uci-appliances-source.json
             outputs/uci-appliances-reconstruction-${{ matrix.architecture }}.json
             outputs/uci-appliances-reconstruction-${{ matrix.architecture }}.stderr
+          if-no-files-found: error
+
+  convergence-sweep:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [itransformer, patchtst]
+    concurrency:
+      group: uci-reconstruction-convergence-${{ github.event.pull_request.number || github.ref }}-${{ matrix.architecture }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Q-RECON
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[test]'
+      - name: Download and verify immutable UCI source
+        run: |
+          mkdir -p outputs
+          python scripts/fetch_uci_appliances.py \
+            --output-dir data/UCI-appliances \
+            --manifest outputs/uci-appliances-source.json
+      - name: Verify optimization and alignment contracts
+        run: |
+          pytest -q \
+            tests/test_channel_alignment_metrics.py \
+            tests/test_modern_time_series_models.py \
+            tests/test_gradient_release.py \
+            --junitxml=outputs/uci-convergence-tests-${{ matrix.architecture }}.xml
+      - name: Run 25/100/400-step paired convergence sweep
+        run: |
+          python examples/uci_appliances_reconstruction_convergence.py \
+            --architecture ${{ matrix.architecture }} \
+            > outputs/uci-reconstruction-convergence-${{ matrix.architecture }}.json \
+            2> outputs/uci-reconstruction-convergence-${{ matrix.architecture }}.stderr
+      - name: Enforce convergence completeness gate
+        run: |
+          ARCHITECTURE='${{ matrix.architecture }}' python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          architecture = os.environ["ARCHITECTURE"]
+          payload = json.loads(
+              Path(
+                  f"outputs/uci-reconstruction-convergence-{architecture}.json"
+              ).read_text()
+          )
+          gate = payload["quality_gate"]
+          assert gate["passed"] is True
+          assert gate["immutable_non_ett_source"] is True
+          assert gate["modern_anonymous_channel_architecture"] is True
+          assert gate["ten_private_records"] is True
+          assert gate["three_restarts_per_step_count"] is True
+          assert gate["predeclared_25_100_400_steps"] is True
+          assert gate["all_ninety_attempts_completed"] is True
+          assert gate["every_record_selected_at_every_step_count"] is True
+          assert payload["attack_contract"]["step_counts"] == [25, 100, 400]
+          assert set(payload["step_summaries"]) == {"25", "100", "400"}
+          print(json.dumps(gate, indent=2, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: uci-reconstruction-convergence-${{ matrix.architecture }}
+          path: |
+            outputs/uci-appliances-source.json
+            outputs/uci-reconstruction-convergence-${{ matrix.architecture }}.json
+            outputs/uci-reconstruction-convergence-${{ matrix.architecture }}.stderr
+            outputs/uci-convergence-tests-${{ matrix.architecture }}.xml
           if-no-files-found: error
