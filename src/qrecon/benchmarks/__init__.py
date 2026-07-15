@@ -85,6 +85,12 @@ from .modern_timeseries_reconstruction import (
     load_modern_timeseries_manifest,
     run_modern_timeseries_reconstruction_benchmark,
 )
+from .paired_learned_ts_inverse import (
+    PairedInitializerAttempt,
+    PairedLearnedQualityGate,
+    PairedLearnedTSInverseReport,
+    run_paired_learned_ts_inverse_benchmark,
+)
 from .real_candidate_manifest import (
     CandidateQuantizationSpec,
     LoadedRealCandidateSet,
@@ -159,6 +165,9 @@ __all__ = [
     "ModernTimeSeriesAttackManifest",
     "ModernTimeSeriesBenchmarkReport",
     "ModernTimeSeriesQualityGate",
+    "PairedInitializerAttempt",
+    "PairedLearnedQualityGate",
+    "PairedLearnedTSInverseReport",
     "ProportionSummary",
     "QuantizedCandidateAudit",
     "RealBatchGradientManifest",
@@ -188,6 +197,7 @@ __all__ = [
     "run_modern_timeseries_attack_suite",
     "run_modern_timeseries_defense_suite",
     "run_modern_timeseries_reconstruction_benchmark",
+    "run_paired_learned_ts_inverse_benchmark",
     "run_real_batch_gradient_phase_diagram",
     "run_ts_inverse_style_benchmark",
     "solve_vector_two_sum",
