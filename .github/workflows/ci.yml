@@ -133,7 +133,7 @@ jobs:
 
   real-multivariate-calibration:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -164,6 +164,29 @@ jobs:
             ettm1-source-manifest.json
             ettm1-itransformer-calibration.json
             ettm1-itransformer-final-head-orbit.json
+          if-no-files-found: error
+
+  ts-inverse-objective-publication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Run 20-window three-seed GIFT-Eval PatchTST L1 study
+        run: |
+          python examples/gifteval_patchtst_ts_inverse_publication.py \
+            > gifteval-patchtst-ts-inverse-publication.json
+      - name: Upload TS-Inverse objective publication report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gifteval-patchtst-ts-inverse-publication
+          path: gifteval-patchtst-ts-inverse-publication.json
           if-no-files-found: error
 
   solver-tests:
