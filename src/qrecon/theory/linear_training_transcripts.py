@@ -231,11 +231,11 @@ def simulate_linear_training_from_statistics(
             )
             weight_second = (
                 config.beta2 * weight_second
-                + (1.0 - config.beta2) * weight_gradient.square()
+                + (1.0 - config.beta2) * np.square(weight_gradient)
             )
             bias_second = (
                 config.beta2 * bias_second
-                + (1.0 - config.beta2) * bias_gradient.square()
+                + (1.0 - config.beta2) * np.square(bias_gradient)
             )
             weight_hat = weight_first / (1.0 - config.beta1**step)
             bias_hat = bias_first / (1.0 - config.beta1**step)
@@ -285,7 +285,7 @@ def simulate_linear_training(
         raise ValueError("inputs and targets must share a batch size")
     return simulate_linear_training_from_statistics(
         linear_gradient_oracle_statistics(x, y),
-        float(np.sum(y.square())),
+        float(np.sum(np.square(y))),
         initial_weights,
         initial_bias,
         steps=steps,
