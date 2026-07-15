@@ -47,8 +47,14 @@ jobs:
       - name: Record immutable source and platform identities
         run: |
           git rev-parse HEAD > publication-git-sha.txt
-          git status --porcelain=v1 > publication-git-status.txt
-          test ! -s publication-git-status.txt
+          # Editable installation may create untracked egg-info. Source integrity is
+          # defined by tracked files, so record all generated paths but reject only
+          # modifications to tracked or staged repository content.
+          git status --porcelain=v1 > publication-full-git-status.txt
+          git status --porcelain=v1 --untracked-files=no > publication-tracked-git-status.txt
+          git diff --exit-code
+          git diff --cached --exit-code
+          test ! -s publication-tracked-git-status.txt
           git archive --format=tar HEAD | sha256sum > publication-source-archive.sha256
           git ls-files -z | LC_ALL=C sort -z | xargs -0 sha256sum > publication-source-files.sha256
           uname -a > publication-uname.txt
@@ -58,7 +64,6 @@ jobs:
           import json
           import os
           import platform
-          import subprocess
           import sys
 
           def read(path):
@@ -69,6 +74,12 @@ jobs:
               "schema_version": "qrecon.publication-environment-freeze.v1",
               "git_sha": read("publication-git-sha.txt"),
               "source_archive_sha256": read("publication-source-archive.sha256").split()[0],
+              "tracked_worktree_clean": not bool(
+                  read("publication-tracked-git-status.txt")
+              ),
+              "generated_or_untracked_paths": read(
+                  "publication-full-git-status.txt"
+              ).splitlines(),
               "python": sys.version,
               "python_executable": sys.executable,
               "platform": platform.platform(),
@@ -97,7 +108,8 @@ jobs:
             publication-pip-freeze.txt
             publication-pip-inspect.json
             publication-git-sha.txt
-            publication-git-status.txt
+            publication-full-git-status.txt
+            publication-tracked-git-status.txt
             publication-source-archive.sha256
             publication-source-files.sha256
             publication-uname.txt
