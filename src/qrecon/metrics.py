@@ -61,6 +61,14 @@ def reconstruction_metrics(
         metrics["uint8_equal_percent"] = float(
             (reference_8bit == estimate_8bit).float().mean() * 100
         )
+    if mode == "timeseries":
+        denominator = reference.abs() + estimate.abs()
+        smape = torch.where(
+            denominator > 1e-12,
+            2.0 * error.abs() / denominator,
+            torch.zeros_like(denominator),
+        )
+        metrics["smape_percent"] = float(smape.mean() * 100.0)
     return metrics
 
 
