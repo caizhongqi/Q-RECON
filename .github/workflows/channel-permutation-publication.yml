@@ -21,9 +21,11 @@ on:
       - "tests/test_channel_permutation_release.py"
   workflow_dispatch:
 
+# Publication evidence is immutable per commit. Later branch work must not cancel
+# an already-declared real-data study before its JSON artifacts are archived.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   ettm1-modern-gradient-orbits:
