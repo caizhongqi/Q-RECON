@@ -34,6 +34,7 @@ jobs:
           python examples/fixed_point_mlp_exact_observation.py > fixed-point-mlp-exact-${{ matrix.python-version }}.json
           python examples/unknown_k_search.py > unknown-k-search-${{ matrix.python-version }}.json
           python examples/unknown_k_cost_envelope.py > unknown-k-cost-${{ matrix.python-version }}.json
+          python examples/fixed_point_benchmark_matrix.py > fixed-point-benchmark-${{ matrix.python-version }}.json
       - name: Compile Python sources
         if: always()
         run: python -m compileall -q src tests examples
@@ -54,6 +55,7 @@ jobs:
             fixed-point-mlp-exact-${{ matrix.python-version }}.json
             unknown-k-search-${{ matrix.python-version }}.json
             unknown-k-cost-${{ matrix.python-version }}.json
+            fixed-point-benchmark-${{ matrix.python-version }}.json
           if-no-files-found: warn
 
   solver-tests:
@@ -67,9 +69,15 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -e '.[solver,test]'
       - name: Run exact SMT baseline tests
-        run: pytest -q tests/test_z3_fixed_point_inversion.py --junitxml=z3-results.xml
+        run: |
+          pytest -q \
+            tests/test_z3_fixed_point_inversion.py \
+            tests/test_z3_benchmark.py \
+            --junitxml=z3-results.xml
       - name: Cross-check SMT, branch-and-bound, and coherent verifier
-        run: python examples/z3_fixed_point_inversion.py > z3-fixed-point-inversion.json
+        run: |
+          python examples/z3_fixed_point_inversion.py > z3-fixed-point-inversion.json
+          python examples/fixed_point_benchmark_matrix.py --z3 > z3-benchmark-matrix.json
       - name: Upload SMT baseline report
         if: always()
         uses: actions/upload-artifact@v4
@@ -78,6 +86,7 @@ jobs:
           path: |
             z3-results.xml
             z3-fixed-point-inversion.json
+            z3-benchmark-matrix.json
           if-no-files-found: warn
 
   quantum-smoke:
