@@ -1,0 +1,89 @@
+name: uci-appliances-large-model-stress
+
+on:
+  pull_request:
+    paths:
+      - "scripts/fetch_uci_appliances.py"
+      - "examples/uci_appliances_large_model_channel_permutation_stress.py"
+      - "src/qrecon/benchmarks/channel_permutation_fibre.py"
+      - "src/qrecon/benchmarks/modern_timeseries_reconstruction.py"
+      - "src/qrecon/data/**"
+      - "src/qrecon/models/**"
+      - "src/qrecon/theory/channel_permutation.py"
+      - ".github/workflows/uci-appliances-large-model-stress.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uci-appliances-large-model-stress-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  uci-long-context-large-model:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Q-RECON
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[test]'
+      - name: Download and verify immutable UCI source
+        run: |
+          mkdir -p outputs
+          python scripts/fetch_uci_appliances.py \
+            --output-dir data/UCI-appliances \
+            --manifest outputs/uci-appliances-source.json
+      - name: Run focused model and fibre tests
+        run: |
+          pytest -q \
+            tests/test_modern_time_series_models.py \
+            tests/test_channel_permutation_fibre.py \
+            --junitxml=outputs/uci-large-model-stress-tests.xml
+      - name: Run long-context large-model stress matrix
+        run: |
+          python examples/uci_appliances_large_model_channel_permutation_stress.py \
+            > outputs/uci-appliances-large-model-stress.json \
+            2> outputs/uci-appliances-large-model-stress.stderr
+      - name: Enforce publication quality gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(
+              Path("outputs/uci-appliances-large-model-stress.json").read_text()
+          )
+          gate = payload["quality_gate"]
+          assert gate["passed"] is True
+          assert gate["independent_non_ett_real_dataset"] is True
+          assert gate["two_modern_architectures"] is True
+          assert gate["long_context_and_horizon"] is True
+          assert gate["ten_windows_per_cell"] is True
+          assert gate["source_sha256_locked"] is True
+          assert gate["all_fibre_gates_passed"] is True
+          assert gate["twenty_primary_fibre_points"] is True
+          assert payload["declaration"]["context"] == 96
+          assert payload["declaration"]["horizon"] == 24
+          assert payload["declaration"]["primary_gradient_fibre_points"] == 20
+          assert len(payload["reports"]) == 2
+          for report in payload["reports"]:
+              assert report["quality_gate_passed"] is True
+              assert report["fibre"]["summary"]["points"] == 10
+          print(json.dumps(gate, indent=2, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: uci-appliances-large-model-stress
+          path: |
+            outputs/uci-appliances-source.json
+            outputs/uci-appliances-large-model-stress.json
+            outputs/uci-appliances-large-model-stress.stderr
+            outputs/uci-large-model-stress-tests.xml
+          if-no-files-found: error
