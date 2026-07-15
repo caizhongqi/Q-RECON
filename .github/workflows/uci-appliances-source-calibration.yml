@@ -1,0 +1,48 @@
+name: uci-appliances-source-calibration
+
+on:
+  pull_request:
+    paths:
+      - "scripts/fetch_uci_appliances.py"
+      - ".github/workflows/uci-appliances-source-calibration.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uci-appliances-source-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  calibrate-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download source and compute immutable hashes
+        run: |
+          python scripts/fetch_uci_appliances.py \
+            --output-dir data/UCI-appliances \
+            --manifest outputs/uci-appliances-source.json
+      - name: Validate calibration manifest
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(Path("outputs/uci-appliances-source.json").read_text())
+          assert payload["archive_bytes"] > 0
+          assert payload["csv_bytes"] > 0
+          assert len(payload["archive_sha256"]) == 64
+          assert len(payload["csv_sha256"]) == 64
+          assert payload["locked"] is False
+          print(json.dumps(payload, indent=2, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uci-appliances-source-calibration
+          path: outputs/uci-appliances-source.json
+          if-no-files-found: error
