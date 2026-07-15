@@ -5,7 +5,7 @@ on:
     branches: ["agent/**"]
     paths:
       - ".github/workflows/paired-learned-ts-inverse.yml"
-      - "examples/gifteval_patchtst_paired_learned_ts_inverse.py"
+      - "examples/gifteval_patchtst_paired_learned_publication.py"
       - "src/qrecon/attacks/learned_quantile_initializer.py"
       - "src/qrecon/attacks/ts_inverse_style.py"
       - "src/qrecon/benchmarks/learned_ts_inverse.py"
@@ -30,18 +30,21 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: pip install -e '.[test]'
-      - name: Run paired random versus learned TS-Inverse study
+      - name: Verify paired learned attack implementation
+        run: pytest -q tests/test_paired_learned_ts_inverse.py --junitxml=paired-learned-tests.xml
+      - name: Run disjoint confirmatory random-versus-learned TS-Inverse study
         run: |
           set -o pipefail
-          python examples/gifteval_patchtst_paired_learned_ts_inverse.py \
-            > gifteval-patchtst-paired-learned-ts-inverse.json \
-            2> >(tee gifteval-patchtst-paired-learned-ts-inverse.stderr >&2)
+          python examples/gifteval_patchtst_paired_learned_publication.py \
+            > gifteval-patchtst-paired-learned-publication.json \
+            2> >(tee gifteval-patchtst-paired-learned-publication.stderr >&2)
       - name: Upload paired comparison evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gifteval-patchtst-paired-learned-ts-inverse
+          name: gifteval-patchtst-paired-learned-publication
           path: |
-            gifteval-patchtst-paired-learned-ts-inverse.json
-            gifteval-patchtst-paired-learned-ts-inverse.stderr
+            paired-learned-tests.xml
+            gifteval-patchtst-paired-learned-publication.json
+            gifteval-patchtst-paired-learned-publication.stderr
           if-no-files-found: error
