@@ -34,7 +34,10 @@
 - [保持结构的可逆两层 MLP/ReLU 编译器](docs/REVERSIBLE_MLP_ORACLE.md)
 - [任意深度可逆 ReLU MLP 与共享工作区定理](docs/DEEP_REVERSIBLE_MLP_ORACLE.md)
 - [固定点两层 MLP 精确观测相等预言机](docs/FIXED_POINT_MLP_EXACT_OBSERVATION.md)
+- [结构化有限乘积域的干净 membership 与组合预言机](docs/STRUCTURED_DOMAIN_ORACLE.md)
+- [Z3 固定点 MLP 精确反演基线](docs/Z3_FIXED_POINT_INVERSION.md)
 - [未知标记数下的 BBHT 搜索与有限成功率证书](docs/UNKNOWN_K_QUANTUM_SEARCH.md)
+- [未知标记数下的稳健端到端成本比较](docs/UNKNOWN_K_END_TO_END_COSTING.md)
 - [端到端成本比较协议](docs/END_TO_END_COST_PROTOCOL.md)
 - [理论到实验的评估协议](docs/THEORY_EVALUATION_PROTOCOL.md)
 - [研究创新与论文路线](docs/RESEARCH_INNOVATION.md)
@@ -62,6 +65,7 @@
 - 公开标签小候选域上的聚合梯度全局可识别证书，以及私有标签下超出批次置换的非平凡碰撞 fibre；
 - 经典无放回搜索、已知 `K` 标准 Grover 与未知 `K` BBHT 随机迭代成功率/查询模型；
 - 对所有允许正标记数逐一核验的 BBHT 有限空间统一成功率证书，并单独报告 phase 与测量后验证查询；
+- 未知 `K` 搜索的最坏期望量子成本包络，以及与任意声明的最强专用经典求解器的同单位比较；
 - 端到端成本 break-even、量子搜索计划优化与近似预言机误差界；
 - 二进制定点、双补码、确定性舍入、显式溢出语义与逐层区间证明；
 - 量化 Logistic Regression/MLP 的 bit-exact 参考求值器；
@@ -71,18 +75,21 @@
 - 可逆两层 `Affine → ReLU → Affine/Threshold` MLP 相位预言机；
 - 任意隐藏层深度的整数 ReLU MLP 相位预言机；
 - 固定点两层 `Affine → ReLU → Affine` 的 clean value、threshold 与多输出 exact-equality phase oracle；
+- 非连续有符号固定点乘积域的 clean feature-membership、全特征 AND 与 MLP exact-output 组合预言机；
 - 与 fixed-point MLP exact-equality oracle 完全同语义的完备 branch-and-bound 经典反演器；
+- 与参考求值器相同舍入、ReLU、饱和和溢出语义的 Z3 SMT 精确反演器及 complete/incomplete 终止证明；
+- branch-and-bound、SMT 与 domain-restricted coherent oracle 的三方解集一致性审计；
 - 跨层共享算术工作区，峰值 ancilla 由最大单层工作量而非各层之和决定；
 - ReLU 的双补码符号控制 Toffoli 实现及隐藏激活/预激活的 Bennett 清理；
 - 单样本训练梯度的保持结构算术预言机：可逆残差、可逆有符号变量乘法、全梯度输出和精确相等 verifier；
 - 有序批次聚合梯度的保持结构算术预言机：逐记录共享工作区、模加聚合、全梯度输出、精确相等 verifier 与完全反计算；
-- truth-table、ANF、Affine、MLP、fixed-point MLP、单样本梯度与批次梯度多后端的逐输入等价、自逆、置换和 ancilla 清理验证；
+- truth-table、ANF、Affine、MLP、fixed-point MLP、domain membership、单样本梯度与批次梯度多后端的逐输入等价、自逆、置换和 ancilla 清理验证；
 - 有限空间全局 fibre、碰撞规模和 Bayes 恢复上限分析；
 - 由真实编译 predicate gate netlist 驱动的 Grover 状态向量验证；
 - 可机读的 logical-qubit、ancilla、controlled-X、Toffoli、T-count、T-depth、查询和摊销成本报告；
 - parity、all-zero equality、majority、Affine、MLP、single-gradient 与 batch-gradient predicate 的综合扩展分析；
 - 重构质量与量子逻辑资源统计；
-- 多 Python 版本经典/理论 CI 和独立 PennyLane 前向反向 smoke test；
+- Python 3.10/3.12 理论与编译器 CI、独立 Z3 solver CI，以及 PennyLane 前向反向 smoke test；
 - YAML 实验配置和单元测试。
 
 ## 安装
@@ -92,7 +99,7 @@
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -e '.[quantum,test]'
+pip install -e '.[quantum,solver,test]'
 ```
 
 ## 快速验证
@@ -109,6 +116,8 @@ python examples/gradient_reconstruction_demo.py
 python examples/batch_gradient_demo.py
 python examples/fixed_point_mlp_exact_observation.py
 python examples/unknown_k_search.py
+python examples/unknown_k_cost_envelope.py
+python examples/z3_fixed_point_inversion.py
 ```
 
 运行真实数据实验：
@@ -128,10 +137,10 @@ qrecon --config configs/image_community_forensics_lenet_lbfgs.yaml
 
 项目已经建立信息论恢复界、目标等价类恢复、局部与有限空间全局可识别性、聚合梯度显式碰撞族、理想与未知标记数查询复杂度、近似预言机误差以及端到端摊销成本的形式化基础。
 
-相干编译部分具备多类可交叉验证的路径：mixed-polarity minterm、GF(2) ANF、保持结构的整数 Affine、任意深度整数 ReLU MLP、固定点两层 MLP exact-output equality、单样本完整训练梯度，以及有序批次聚合梯度。枚举型后端提供有限空间独立精确综合基线；保持结构的后端执行多项式规模的真实 X/CNOT/Toffoli gate netlist，并通过 compute-copy-uncompute、反向层清理、逐记录反计算和共享工作区复用将全部算术、预激活、激活、残差、乘法、比较和聚合寄存器恢复为零。小规模配置对所有候选、两个初始目标位、逆电路、phase sign、Grover 曲线、碰撞 fibre、经典解集一致性和资源恒等式进行穷举验证。
+相干编译部分具备多类可交叉验证的路径：mixed-polarity minterm、GF(2) ANF、保持结构的整数 Affine、任意深度整数 ReLU MLP、固定点两层 MLP exact-output equality、结构化 product-domain membership、单样本完整训练梯度，以及有序批次聚合梯度。枚举型后端提供有限空间独立精确综合基线；保持结构的后端执行真实 X/CNOT/Toffoli gate netlist，并通过 compute-copy-uncompute、反向层清理、逐记录反计算和共享工作区复用将全部算术、预激活、激活、残差、乘法、比较、域 membership 和聚合寄存器恢复为零。小规模配置对所有候选、两个初始目标位、逆电路、phase sign、Grover 曲线、碰撞 fibre、经典/SMT 解集一致性和资源恒等式进行穷举验证。
 
-固定点 MLP exact-output 任务已经形成“bit-exact 观测定义 → 完备 branch-and-bound 经典解集 → clean value/equality/phase oracle → 同一标记集合 → Grover 执行 → 逻辑资源报告”的闭环。搜索协议不再默认知道真实 `K`：BBHT 调度仅依赖公开人口规模，并可在声明的有限候选区间内对全部正 `K` 给出统一成功率证书。单样本完整线性梯度仍给出明确无优势结论；批次和非线性任务仍需面对最强专用经典求解器。
+固定点 MLP exact-output 任务已经形成“bit-exact 观测定义 → 完备 branch-and-bound 与 SMT 经典解集 → clean domain/value/equality/phase oracle → 同一标记集合 → 未知 `K` 搜索证书 → Grover 与逻辑资源报告 → 专用经典求解器成本包络”的闭环。搜索协议不再默认知道真实 `K`，并且无效 bit words 可通过显式 clean membership 被排除；若改用只覆盖结构化域的状态制备，其制备和反射成本仍必须单独计入。
 
-项目仍不宣称已经获得实际端到端量子优势。最关键的下一门槛是把真实结构化候选先验、SAT/SMT、整数规划、代数消元、改进 branch-and-bound、meet-in-the-middle 和多启动连续优化纳入同一成功率与成本口径，并在真实或可证明代表性的泄漏任务上得到稳健非空的优势区域，或形成严格的无优势边界。当前 VQC 仍只是潜空间重构先验，不是上述相干训练泄漏预言机。
+项目仍不宣称已经获得实际端到端量子优势。最关键的下一门槛是把真实结构化数据泄漏任务、更多 SAT/SMT/MIP 与代数求解器、多启动连续优化、系统化规模实验和故障容错参数不确定性纳入同一成功率与成本口径，并得到稳健非空的优势区域，或形成严格的无优势边界。当前 VQC 仍只是潜空间重构先验，不是上述相干训练泄漏预言机。
 
 在 batch size 1、完整梯度可见且首层带偏置 Linear 直接接收原始输入时，解析攻击已在真实 GIFT-Eval 与 Community Forensics 样本上实现 `within 1e-6 = 100%`；该结论不适用于任意 CNN、聚合梯度或受防御保护的训练过程。
