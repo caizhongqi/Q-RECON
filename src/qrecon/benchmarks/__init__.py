@@ -1,5 +1,18 @@
 """Reproducible benchmark generators and matched classical/quantum reports."""
 
+from .candidate_loading import (
+    EmpiricalCandidateLoadingReport,
+    empirical_candidate_loading_report,
+)
+from .empirical_batch_gradient import (
+    EmpiricalBatchGradientFailure,
+    EmpiricalBatchGradientPoint,
+    GradientRangeCertificate,
+    RealBatchGradientPhaseDiagram,
+    VectorTwoSumReport,
+    run_real_batch_gradient_phase_diagram,
+    solve_vector_two_sum,
+)
 from .fixed_point_mlp import (
     FixedPointMLPBenchmarkConfig,
     FixedPointMLPBenchmarkResult,
@@ -18,6 +31,12 @@ from .manifest import (
     run_fixed_point_mlp_manifest,
     summarize_manifest_execution,
 )
+from .real_candidate_manifest import (
+    CandidateQuantizationSpec,
+    LoadedRealCandidateSet,
+    RealBatchGradientManifest,
+    load_real_candidate_set,
+)
 from .statistics import (
     BenchmarkQualityGate,
     ConfidenceInterval,
@@ -32,30 +51,46 @@ from .statistics import (
     summarize_proportion,
     summarize_scalar,
 )
+from .tensor_candidates import QuantizedCandidateAudit, audit_quantized_candidate_tensor
 
 __all__ = [
     "BenchmarkQualityGate",
     "BenchmarkRunRecord",
+    "CandidateQuantizationSpec",
     "CollapsedFixedPointMLPBenchmarkResult",
     "ConfidenceInterval",
+    "EmpiricalBatchGradientFailure",
+    "EmpiricalBatchGradientPoint",
+    "EmpiricalCandidateLoadingReport",
     "FixedPointMLPBenchmarkConfig",
     "FixedPointMLPBenchmarkManifest",
     "FixedPointMLPBenchmarkResult",
     "FixedPointMLPConfigSummary",
     "FixedPointMLPInstance",
     "FixedPointMLPMatrixSummary",
+    "GradientRangeCertificate",
+    "LoadedRealCandidateSet",
     "LogLogScalingFit",
     "ManifestExecution",
     "ManifestStatisticalReport",
     "ProportionSummary",
+    "QuantizedCandidateAudit",
+    "RealBatchGradientManifest",
+    "RealBatchGradientPhaseDiagram",
     "ScalarSummary",
+    "VectorTwoSumReport",
+    "audit_quantized_candidate_tensor",
     "benchmark_environment_manifest",
     "build_fixed_point_mlp_instance",
     "collapse_manifest_measurements",
+    "empirical_candidate_loading_report",
     "fit_loglog_scaling",
+    "load_real_candidate_set",
     "run_fixed_point_mlp_benchmark",
     "run_fixed_point_mlp_benchmark_matrix",
     "run_fixed_point_mlp_manifest",
+    "run_real_batch_gradient_phase_diagram",
+    "solve_vector_two_sum",
     "summarize_fixed_point_mlp_benchmark_matrix",
     "summarize_manifest_execution",
     "summarize_proportion",
