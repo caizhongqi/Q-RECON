@@ -1,0 +1,87 @@
+name: uci-appliances-strong-reconstruction-confirmatory
+
+on:
+  pull_request:
+    paths:
+      - "scripts/fetch_uci_appliances.py"
+      - "examples/uci_appliances_multivariate_reconstruction.py"
+      - "examples/uci_appliances_multivariate_reconstruction_confirmatory.py"
+      - "src/qrecon/attacks/**"
+      - "src/qrecon/metrics.py"
+      - "src/qrecon/data/**"
+      - "src/qrecon/models/**"
+      - ".github/workflows/uci-appliances-strong-reconstruction-confirmatory.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  strong-attack-suite:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [itransformer, patchtst]
+    concurrency:
+      group: uci-strong-reconstruction-${{ github.event.pull_request.number || github.ref }}-${{ matrix.architecture }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Q-RECON
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[test]'
+      - name: Download and verify immutable UCI source
+        run: |
+          python scripts/fetch_uci_appliances.py \
+            --output-dir data/UCI-appliances \
+            --manifest outputs/uci-appliances-source.json
+      - name: Verify attack and alignment primitives
+        run: |
+          pytest -q \
+            tests/test_channel_alignment_metrics.py \
+            tests/test_time_series_attack_suite.py \
+            tests/test_ts_inverse_style.py
+      - name: Run strong orbit-aware reconstruction suite
+        run: |
+          python examples/uci_appliances_multivariate_reconstruction_confirmatory.py \
+            --architecture ${{ matrix.architecture }} \
+            > outputs/uci-strong-reconstruction-${{ matrix.architecture }}.json \
+            2> outputs/uci-strong-reconstruction-${{ matrix.architecture }}.stderr
+      - name: Enforce completeness and selection gates
+        run: |
+          ARCHITECTURE='${{ matrix.architecture }}' python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          architecture = os.environ["ARCHITECTURE"]
+          payload = json.loads(
+              Path(f"outputs/uci-strong-reconstruction-{architecture}.json").read_text()
+          )
+          assert payload["quality_gate"]["passed"] is True
+          assert payload["quality_gate"]["four_predeclared_attack_variants"] is True
+          assert payload["quality_gate"]["all_one_hundred_twenty_attempts_completed"] is True
+          assert payload["quality_gate"]["every_variant_record_has_selected_attempt"] is True
+          assert payload["attack_contract"]["known_target"] is False
+          assert set(payload["variant_summaries"]) == {
+              "adam_cosine_150",
+              "adam_hybrid_150",
+              "adam_temporal_150",
+              "lbfgs_hybrid_75",
+          }
+          print(json.dumps(payload["variant_summaries"], indent=2, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: uci-strong-reconstruction-${{ matrix.architecture }}
+          path: |
+            outputs/uci-appliances-source.json
+            outputs/uci-strong-reconstruction-${{ matrix.architecture }}.json
+            outputs/uci-strong-reconstruction-${{ matrix.architecture }}.stderr
+          if-no-files-found: error
