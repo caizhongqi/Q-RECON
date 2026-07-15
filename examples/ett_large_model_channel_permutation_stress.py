@@ -116,7 +116,6 @@ def _manifest(dataset: dict[str, str], victim: dict[str, object], seed: int):
 def main() -> None:
     reports: list[dict[str, object]] = []
     all_passed = True
-    maximum_parameters = 0
     for dataset_index, dataset in enumerate(DATASETS):
         observed = _sha256(dataset["path"])
         if observed != dataset["sha256"]:
@@ -134,14 +133,6 @@ def main() -> None:
                 # execution of the generator identities at the larger declared scale.
                 tolerance=5e-5,
             )
-            parameters = int(
-                sum(
-                    value.numel()
-                    for value in []
-                )
-            )
-            # The report hashes the trained model; the concrete parameter count is
-            # reconstructed from the architecture declaration below for auditability.
             all_passed = all_passed and report.quality_gate.passed
             reports.append(
                 {
