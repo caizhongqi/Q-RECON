@@ -38,6 +38,13 @@ from .head_representation_reconstruction import (
     HeadRepresentationBenchmarkReport,
     run_head_representation_reconstruction_benchmark,
 )
+from .learned_ts_inverse import (
+    LearnedQuantileAttempt,
+    LearnedQuantileAuxiliaryConfig,
+    LearnedQuantileBenchmarkReport,
+    LearnedQuantileQualityGate,
+    run_learned_quantile_ts_inverse_benchmark,
+)
 from .manifest import (
     BenchmarkRunRecord,
     CollapsedFixedPointMLPBenchmarkResult,
@@ -124,6 +131,10 @@ __all__ = [
     "HeadReleaseStabilityReport",
     "HeadRepresentationBenchmarkAttempt",
     "HeadRepresentationBenchmarkReport",
+    "LearnedQuantileAttempt",
+    "LearnedQuantileAuxiliaryConfig",
+    "LearnedQuantileBenchmarkReport",
+    "LearnedQuantileQualityGate",
     "LoadedRealCandidateSet",
     "LogLogScalingFit",
     "MODERN_FORECASTING_ARCHITECTURES",
@@ -165,6 +176,7 @@ __all__ = [
     "run_fixed_point_mlp_manifest",
     "run_head_release_stability_audit",
     "run_head_representation_reconstruction_benchmark",
+    "run_learned_quantile_ts_inverse_benchmark",
     "run_modern_timeseries_attack_suite",
     "run_modern_timeseries_defense_suite",
     "run_modern_timeseries_reconstruction_benchmark",
