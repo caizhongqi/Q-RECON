@@ -1,0 +1,106 @@
+name: publication-environment-freeze
+
+on:
+  push:
+    branches: ["agent/**"]
+    paths:
+      - ".github/workflows/publication-environment-freeze.yml"
+      - "pyproject.toml"
+      - "src/**"
+      - "tests/**"
+      - "examples/**"
+      - "scripts/**"
+  pull_request:
+    paths:
+      - ".github/workflows/publication-environment-freeze.yml"
+      - "pyproject.toml"
+      - "src/**"
+      - "tests/**"
+      - "examples/**"
+      - "scripts/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  freeze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[quantum,solver,test]'
+      - name: Run complete artifact test suite
+        run: pytest -q --junitxml=publication-freeze-tests.xml
+      - name: Freeze Python dependency graph
+        run: |
+          python -m pip freeze --all | LC_ALL=C sort > publication-pip-freeze.txt
+          python -m pip inspect > publication-pip-inspect.json
+      - name: Record immutable source and platform identities
+        run: |
+          git rev-parse HEAD > publication-git-sha.txt
+          git status --porcelain=v1 > publication-git-status.txt
+          test ! -s publication-git-status.txt
+          git archive --format=tar HEAD | sha256sum > publication-source-archive.sha256
+          git ls-files -z | LC_ALL=C sort -z | xargs -0 sha256sum > publication-source-files.sha256
+          uname -a > publication-uname.txt
+          lscpu > publication-lscpu.txt
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import platform
+          import subprocess
+          import sys
+
+          def read(path):
+              with open(path, encoding="utf-8") as handle:
+                  return handle.read().strip()
+
+          payload = {
+              "schema_version": "qrecon.publication-environment-freeze.v1",
+              "git_sha": read("publication-git-sha.txt"),
+              "source_archive_sha256": read("publication-source-archive.sha256").split()[0],
+              "python": sys.version,
+              "python_executable": sys.executable,
+              "platform": platform.platform(),
+              "machine": platform.machine(),
+              "processor": platform.processor(),
+              "cpu_count": os.cpu_count(),
+              "github_run_id": os.environ.get("GITHUB_RUN_ID"),
+              "github_repository": os.environ.get("GITHUB_REPOSITORY"),
+              "github_ref": os.environ.get("GITHUB_REF"),
+              "timing_claim_boundary": (
+                  "GitHub-hosted timing is an execution record, not a pinned-hardware "
+                  "runtime or speedup measurement."
+              ),
+          }
+          basis = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+          payload["manifest_sha256"] = hashlib.sha256(basis.encode("utf-8")).hexdigest()
+          with open("publication-environment.json", "w", encoding="utf-8") as handle:
+              json.dump(payload, handle, indent=2, sort_keys=True)
+          PY
+      - name: Upload immutable publication environment
+        uses: actions/upload-artifact@v4
+        with:
+          name: publication-environment-${{ github.sha }}
+          path: |
+            publication-environment.json
+            publication-pip-freeze.txt
+            publication-pip-inspect.json
+            publication-git-sha.txt
+            publication-git-status.txt
+            publication-source-archive.sha256
+            publication-source-files.sha256
+            publication-uname.txt
+            publication-lscpu.txt
+            publication-freeze-tests.xml
+          if-no-files-found: error
