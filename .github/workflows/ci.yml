@@ -93,6 +93,10 @@ jobs:
         run: |
           python examples/gifteval_patchtst_head_representation.py \
             > gifteval-patchtst-head-representation.json
+      - name: Run paired clipping, quantization, noise, and visibility suite
+        run: |
+          python examples/gifteval_patchtst_defense_suite.py \
+            > gifteval-patchtst-defense-suite.json
       - name: Upload real modern-model calibration reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -102,6 +106,7 @@ jobs:
             gifteval-patchtst-calibration.json
             gifteval-patchtst-attack-suite.json
             gifteval-patchtst-head-representation.json
+            gifteval-patchtst-defense-suite.json
           if-no-files-found: error
 
   solver-tests:
