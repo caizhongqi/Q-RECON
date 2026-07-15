@@ -14,8 +14,13 @@ from qrecon.oracles import (
 from qrecon.theory import (
     BBHTExistenceDecisionCertificate,
     BBHTExistenceDecisionEvaluation,
+    ExplicitTableNoAdvantageCertificate,
+    PositiveIntegerWorkloadRegion,
+    certified_explicit_table_no_advantage_region,
     certify_bbht_existence_decision,
+    certify_explicit_table_no_advantage,
     evaluate_bbht_existence_decision,
+    explicit_table_compiler_bit_probe_lower_bound,
 )
 
 
@@ -38,3 +43,11 @@ def test_zero_solution_bbht_decision_is_public():
     assert BBHTExistenceDecisionEvaluation is not None
     assert callable(certify_bbht_existence_decision)
     assert callable(evaluate_bbht_existence_decision)
+
+
+def test_explicit_table_no_advantage_boundary_is_public():
+    assert ExplicitTableNoAdvantageCertificate is not None
+    assert PositiveIntegerWorkloadRegion is not None
+    assert callable(certify_explicit_table_no_advantage)
+    assert callable(certified_explicit_table_no_advantage_region)
+    assert explicit_table_compiler_bit_probe_lower_bound(2, 3) == 6
