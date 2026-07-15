@@ -4,22 +4,36 @@ import hashlib
 import json
 import math
 from dataclasses import asdict, dataclass
+from typing import Sequence
 
 import torch
 
-from qrecon.attacks import leak_gradients
-from qrecon.benchmarks.modern_timeseries_reconstruction import (
-    ModernTimeSeriesAttackManifest,
-    _model_sha256,
-    _tensor_sha256,
+from qrecon.experiment import _build_model, _load_dataset, _seed_everything, _train
+from qrecon.theory.channel_permutation import (
+    ChannelPermutationFibreBound,
+    channel_permutation_fibre_bound,
 )
-from qrecon.benchmarks.statistics import (
+
+from .modern_timeseries_reconstruction import ModernTimeSeriesAttackManifest
+from .statistics import (
+    ProportionSummary,
+    ScalarSummary,
     benchmark_environment_manifest,
     summarize_proportion,
     summarize_scalar,
 )
-from qrecon.experiment import _build_model, _load_dataset, _seed_everything, _train
-from qrecon.theory.channel_permutation import channel_permutation_fibre_bound
+
+
+@dataclass(frozen=True)
+class ChannelPermutationGeneratorCheck:
+    left_channel: int
+    right_channel: int
+    output_equivariance_max_abs_error: float
+    gradient_max_abs_difference: float
+    gradient_relative_l2_difference: float
+
+    def to_dict(self) -> dict[str, int | float]:
+        return asdict(self)
 
 
 @dataclass(frozen=True)
@@ -42,29 +56,62 @@ class ChannelPermutationFibrePoint:
 
 
 @dataclass(frozen=True)
+class ChannelPermutationFibreSummary:
+    points: int
+    nontrivial_orbit: ProportionSummary
+    generator_checks: ProportionSummary
+    orbit_size: ScalarSummary
+    uniform_exact_ordered_recovery_ceiling: ScalarSummary
+    maximum_output_equivariance_error: ScalarSummary
+    maximum_gradient_invariance_error: ScalarSummary
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "points": self.points,
+            "nontrivial_orbit": self.nontrivial_orbit.to_dict(),
+            "generator_checks": self.generator_checks.to_dict(),
+            "orbit_size": self.orbit_size.to_dict(),
+            "uniform_exact_ordered_recovery_ceiling": (
+                self.uniform_exact_ordered_recovery_ceiling.to_dict()
+            ),
+            "maximum_output_equivariance_error": (
+                self.maximum_output_equivariance_error.to_dict()
+            ),
+            "maximum_gradient_invariance_error": (
+                self.maximum_gradient_invariance_error.to_dict()
+            ),
+        }
+
+
+@dataclass(frozen=True)
 class ChannelPermutationFibreQualityGate:
     real_dataset: bool
     data_access_locked: bool
-    enough_attack_batches: bool
     multivariate: bool
-    all_generator_checks_pass: bool
+    enough_attack_batches: bool
     every_orbit_nontrivial: bool
+    all_generator_checks_pass: bool
     publication_mode: bool
-    passed: bool
+
+    @property
+    def passed(self) -> bool:
+        return all(asdict(self).values())
 
     def to_dict(self) -> dict[str, bool]:
-        return asdict(self)
+        payload = asdict(self)
+        payload["passed"] = self.passed
+        return payload
 
 
 @dataclass(frozen=True)
 class ChannelPermutationFibreReport:
-    manifest: ModernTimeSeriesAttackManifest
-    report_sha256: str
+    manifest: dict[str, object]
     dataset_sha256: str
     model_sha256: str
+    report_sha256: str
     victim_class: str
     points: tuple[ChannelPermutationFibrePoint, ...]
-    summary: dict[str, object]
+    summary: ChannelPermutationFibreSummary
     quality_gate: ChannelPermutationFibreQualityGate
     environment: dict[str, object]
     theorem: str
@@ -72,13 +119,13 @@ class ChannelPermutationFibreReport:
 
     def to_dict(self) -> dict[str, object]:
         return {
-            "manifest": self.manifest.to_dict(),
-            "report_sha256": self.report_sha256,
+            "manifest": self.manifest,
             "dataset_sha256": self.dataset_sha256,
             "model_sha256": self.model_sha256,
+            "report_sha256": self.report_sha256,
             "victim_class": self.victim_class,
             "points": [point.to_dict() for point in self.points],
-            "summary": self.summary,
+            "summary": self.summary.to_dict(),
             "quality_gate": self.quality_gate.to_dict(),
             "environment": self.environment,
             "theorem": self.theorem,
@@ -86,62 +133,79 @@ class ChannelPermutationFibreReport:
         }
 
 
-def _report_sha256(manifest: ModernTimeSeriesAttackManifest) -> str:
-    payload = {
-        "schema_version": "qrecon.channel-permutation-fibre.v1",
-        "manifest": manifest.to_dict(),
-    }
+def _tensor_sha256(tensor: torch.Tensor) -> str:
+    value = tensor.detach().cpu().contiguous()
+    header = f"{value.dtype}:{tuple(value.shape)}:".encode("ascii")
+    return hashlib.sha256(header + value.numpy().tobytes(order="C")).hexdigest()
+
+
+def _dataset_sha256(inputs: torch.Tensor, targets: torch.Tensor) -> str:
     return hashlib.sha256(
-        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        (_tensor_sha256(inputs) + ":" + _tensor_sha256(targets)).encode("ascii")
     ).hexdigest()
 
 
-def _channel_signatures(inputs: torch.Tensor, targets: torch.Tensor) -> tuple[str, ...]:
-    if inputs.ndim != 3 or targets.ndim != 3:
-        raise ValueError("channel signatures require multivariate [batch,time,channel] tensors")
-    if inputs.shape[0] != targets.shape[0] or inputs.shape[2] != targets.shape[2]:
-        raise ValueError("input and target batch/channel dimensions must match")
+def _model_sha256(model: torch.nn.Module) -> str:
+    digest = hashlib.sha256()
+    for name, value in sorted(model.state_dict().items()):
+        tensor = value.detach().cpu().contiguous()
+        digest.update(name.encode("utf-8"))
+        digest.update(f":{tensor.dtype}:{tuple(tensor.shape)}:".encode("ascii"))
+        digest.update(tensor.numpy().tobytes(order="C"))
+    return digest.hexdigest()
+
+
+def _channel_signatures(
+    inputs: torch.Tensor, targets: torch.Tensor
+) -> tuple[str, ...]:
     signatures: list[str] = []
-    for channel in range(inputs.shape[2]):
+    for channel in range(inputs.shape[-1]):
         digest = hashlib.sha256()
-        for tensor in (inputs[:, :, channel], targets[:, :, channel]):
+        for tensor in (inputs[..., channel], targets[..., channel]):
             value = tensor.detach().cpu().contiguous()
-            digest.update(str(value.dtype).encode("ascii"))
-            digest.update(json.dumps(list(value.shape)).encode("ascii"))
+            digest.update(f"{value.dtype}:{tuple(value.shape)}:".encode("ascii"))
             digest.update(value.numpy().tobytes(order="C"))
         signatures.append(digest.hexdigest())
     return tuple(signatures)
 
 
-def _adjacent_transpositions(channels: int) -> tuple[torch.Tensor, ...]:
-    if channels < 2:
-        return ()
-    result: list[torch.Tensor] = []
-    for left in range(channels - 1):
-        permutation = torch.arange(channels)
-        permutation[left], permutation[left + 1] = (
-            permutation[left + 1].clone(),
-            permutation[left].clone(),
-        )
-        result.append(permutation)
-    return tuple(result)
+def _gradient_tuple(
+    model: torch.nn.Module, inputs: torch.Tensor, targets: torch.Tensor
+) -> tuple[torch.Tensor, ...]:
+    loss = (model(inputs) - targets).square().mean()
+    parameters = tuple(
+        parameter for parameter in model.parameters() if parameter.requires_grad
+    )
+    gradients = torch.autograd.grad(loss, parameters, allow_unused=True)
+    return tuple(
+        torch.zeros_like(parameter) if gradient is None else gradient.detach()
+        for parameter, gradient in zip(parameters, gradients)
+    )
 
 
-def _gradient_errors(
-    reference: tuple[torch.Tensor, ...],
-    candidate: tuple[torch.Tensor, ...],
+def _tuple_difference(
+    left: Sequence[torch.Tensor], right: Sequence[torch.Tensor]
 ) -> tuple[float, float]:
-    if len(reference) != len(candidate):
-        raise ValueError("gradient tuples have different lengths")
     maximum = 0.0
     numerator = 0.0
     denominator = 0.0
-    for left, right in zip(reference, candidate):
-        difference = left - right
+    for first, second in zip(left, right):
+        difference = (first - second).double()
         maximum = max(maximum, float(difference.abs().max()))
         numerator += float(difference.square().sum())
-        denominator += float(left.square().sum())
-    return maximum, math.sqrt(numerator / max(denominator, 1e-30))
+        denominator += float(first.double().square().sum())
+    return maximum, math.sqrt(numerator) / max(
+        math.sqrt(denominator), torch.finfo(torch.float64).tiny
+    )
+
+
+def _adjacent_transpositions(channels: int) -> tuple[tuple[int, ...], ...]:
+    permutations: list[tuple[int, ...]] = []
+    for left in range(channels - 1):
+        values = list(range(channels))
+        values[left], values[left + 1] = values[left + 1], values[left]
+        permutations.append(tuple(values))
+    return tuple(permutations)
 
 
 def analyze_channel_permutation_fibre(
@@ -149,55 +213,47 @@ def analyze_channel_permutation_fibre(
     inputs: torch.Tensor,
     targets: torch.Tensor,
     *,
-    batch_start: int = 0,
-    tolerance: float = 1e-5,
+    batch_start: int,
+    tolerance: float,
 ) -> ChannelPermutationFibrePoint:
-    """Verify output equivariance and full-gradient invariance on generators of S_C."""
-
-    if inputs.ndim != 3 or targets.ndim != 3:
-        raise ValueError("channel-permutation analysis requires multivariate tensors")
-    if inputs.shape[2] != targets.shape[2]:
-        raise ValueError("input and target channel counts differ")
-    if not math.isfinite(float(tolerance)) or tolerance <= 0.0:
-        raise ValueError("tolerance must be finite and positive")
-
-    channels = int(inputs.shape[2])
-    signatures = _channel_signatures(inputs, targets)
-    fibre = channel_permutation_fibre_bound(signatures)
+    channels = int(inputs.shape[-1])
+    reference_outputs = model(inputs)
+    reference_gradients = _gradient_tuple(model, inputs, targets)
+    checks: list[ChannelPermutationGeneratorCheck] = []
     generators = _adjacent_transpositions(channels)
-    with torch.no_grad():
-        reference_output = model(inputs).detach()
-    reference_gradients = leak_gradients(model, inputs, targets, "forecasting")
-
-    maximum_output_error = 0.0
-    maximum_gradient_error = 0.0
-    maximum_gradient_relative_error = 0.0
-    for permutation in generators:
-        permuted_inputs = inputs[:, :, permutation]
-        permuted_targets = targets[:, :, permutation]
-        with torch.no_grad():
-            permuted_output = model(permuted_inputs).detach()
-        expected_output = reference_output[:, :, permutation]
-        maximum_output_error = max(
-            maximum_output_error,
-            float((permuted_output - expected_output).abs().max()),
+    for left_channel, permutation in enumerate(generators):
+        indices = torch.tensor(permutation, dtype=torch.long, device=inputs.device)
+        permuted_inputs = inputs.index_select(-1, indices)
+        permuted_targets = targets.index_select(-1, indices)
+        expected_outputs = reference_outputs.index_select(-1, indices)
+        actual_outputs = model(permuted_inputs)
+        output_error = float((actual_outputs - expected_outputs).detach().abs().max())
+        permuted_gradients = _gradient_tuple(model, permuted_inputs, permuted_targets)
+        gradient_maximum, gradient_relative = _tuple_difference(
+            reference_gradients, permuted_gradients
         )
-        permuted_gradients = leak_gradients(
-            model,
-            permuted_inputs,
-            permuted_targets,
-            "forecasting",
-        )
-        absolute_error, relative_error = _gradient_errors(
-            reference_gradients,
-            permuted_gradients,
-        )
-        maximum_gradient_error = max(maximum_gradient_error, absolute_error)
-        maximum_gradient_relative_error = max(
-            maximum_gradient_relative_error,
-            relative_error,
+        checks.append(
+            ChannelPermutationGeneratorCheck(
+                left_channel=left_channel,
+                right_channel=left_channel + 1,
+                output_equivariance_max_abs_error=output_error,
+                gradient_max_abs_difference=gradient_maximum,
+                gradient_relative_l2_difference=gradient_relative,
+            )
         )
 
+    fibre: ChannelPermutationFibreBound = channel_permutation_fibre_bound(
+        _channel_signatures(inputs, targets)
+    )
+    maximum_output_error = max(
+        check.output_equivariance_max_abs_error for check in checks
+    )
+    maximum_gradient_error = max(
+        check.gradient_max_abs_difference for check in checks
+    )
+    maximum_gradient_relative_error = max(
+        check.gradient_relative_l2_difference for check in checks
+    )
     passed = (
         maximum_output_error <= tolerance
         and maximum_gradient_error <= tolerance
@@ -235,10 +291,13 @@ def run_channel_permutation_fibre_benchmark(
 ) -> ChannelPermutationFibreReport:
     """Run a real-data simultaneous channel-permutation fibre study."""
 
-    if bool(manifest.victim.get("revin", True)):
+    if bool(manifest.victim.get("revin", True)) and bool(
+        manifest.victim.get("revin_affine", True)
+    ):
         raise ValueError(
-            "the current permutation theorem requires revin=false because learned "
-            "per-channel RevIN affine parameters attach identities to channel positions"
+            "the channel-permutation theorem requires revin=false or "
+            "revin_affine=false because learned per-channel affine parameters "
+            "attach identities to channel positions"
         )
     if bool(manifest.victim.get("individual_head", False)):
         raise ValueError(
@@ -276,93 +335,98 @@ def run_channel_permutation_fibre_benchmark(
             )
         )
 
-    def scalar(values: list[float], label: str) -> dict[str, object]:
-        return summarize_scalar(
-            values,
-            confidence_level=manifest.confidence_level,
-            bootstrap_samples=manifest.bootstrap_samples,
-            bootstrap_seed=manifest.bootstrap_seed,
-            label=f"channel-permutation:{label}",
-        ).to_dict()
-
-    all_checks = all(point.all_generator_checks_pass for point in points)
-    every_nontrivial = all(point.orbit_size > 1 for point in points)
-    summary: dict[str, object] = {
-        "points": len(points),
-        "generator_checks": summarize_proportion(
-            sum(point.all_generator_checks_pass for point in points),
-            len(points),
-            confidence_level=manifest.confidence_level,
-        ).to_dict(),
-        "nontrivial_orbit": summarize_proportion(
+    confidence_level = manifest.confidence_level
+    bootstrap_samples = manifest.bootstrap_samples
+    bootstrap_seed = manifest.bootstrap_seed
+    summary = ChannelPermutationFibreSummary(
+        points=len(points),
+        nontrivial_orbit=summarize_proportion(
             sum(point.orbit_size > 1 for point in points),
             len(points),
-            confidence_level=manifest.confidence_level,
-        ).to_dict(),
-        "orbit_size": scalar(
+            confidence_level=confidence_level,
+        ),
+        generator_checks=summarize_proportion(
+            sum(point.all_generator_checks_pass for point in points),
+            len(points),
+            confidence_level=confidence_level,
+        ),
+        orbit_size=summarize_scalar(
             [float(point.orbit_size) for point in points],
-            "orbit_size",
+            confidence_level=confidence_level,
+            bootstrap_samples=bootstrap_samples,
+            bootstrap_seed=bootstrap_seed,
+            label="channel-permutation:orbit-size",
         ),
-        "uniform_exact_ordered_recovery_ceiling": scalar(
-            [
-                point.uniform_exact_ordered_recovery_ceiling
-                for point in points
-            ],
-            "uniform_exact_ordered_recovery_ceiling",
+        uniform_exact_ordered_recovery_ceiling=summarize_scalar(
+            [point.uniform_exact_ordered_recovery_ceiling for point in points],
+            confidence_level=confidence_level,
+            bootstrap_samples=bootstrap_samples,
+            bootstrap_seed=bootstrap_seed,
+            label="channel-permutation:recovery-ceiling",
         ),
-        "maximum_output_equivariance_error": scalar(
+        maximum_output_equivariance_error=summarize_scalar(
             [point.maximum_output_equivariance_error for point in points],
-            "output_equivariance_error",
+            confidence_level=confidence_level,
+            bootstrap_samples=bootstrap_samples,
+            bootstrap_seed=bootstrap_seed,
+            label="channel-permutation:output-error",
         ),
-        "maximum_gradient_invariance_error": scalar(
+        maximum_gradient_invariance_error=summarize_scalar(
             [point.maximum_gradient_invariance_error for point in points],
-            "gradient_invariance_error",
+            confidence_level=confidence_level,
+            bootstrap_samples=bootstrap_samples,
+            bootstrap_seed=bootstrap_seed,
+            label="channel-permutation:gradient-error",
         ),
-    }
+    )
 
     dataset_name = str(manifest.dataset.get("name", "")).lower()
-    real_dataset = not dataset_name.startswith("synthetic")
-    locked = _data_access_locked(dict(manifest.dataset))
-    enough = len(points) >= manifest.minimum_publication_batches
-    passed = (
-        manifest.publication_mode
-        and real_dataset
-        and locked
-        and enough
-        and all_checks
-        and every_nontrivial
-    )
-    gate = ChannelPermutationFibreQualityGate(
+    real_dataset = dataset_name in {"gift_eval", "multivariate_csv"}
+    quality_gate = ChannelPermutationFibreQualityGate(
         real_dataset=real_dataset,
-        data_access_locked=locked,
-        enough_attack_batches=enough,
-        multivariate=True,
-        all_generator_checks_pass=all_checks,
-        every_orbit_nontrivial=every_nontrivial,
+        data_access_locked=_data_access_locked(dict(manifest.dataset)),
+        multivariate=inputs.ndim == 3 and inputs.shape[-1] > 1,
+        enough_attack_batches=len(points) >= manifest.minimum_publication_batches,
+        every_orbit_nontrivial=all(point.orbit_size > 1 for point in points),
+        all_generator_checks_pass=all(
+            point.all_generator_checks_pass for point in points
+        ),
         publication_mode=manifest.publication_mode,
-        passed=passed,
     )
-
+    manifest_payload = manifest.to_dict()
+    dataset_hash = _dataset_sha256(inputs, targets)
+    model_hash = _model_sha256(model)
+    report_basis = {
+        "manifest": manifest_payload,
+        "dataset_sha256": dataset_hash,
+        "model_sha256": model_hash,
+        "victim_class": type(model).__name__,
+        "points": [point.to_dict() for point in points],
+        "summary": summary.to_dict(),
+        "quality_gate": quality_gate.to_dict(),
+    }
+    report_sha256 = hashlib.sha256(
+        json.dumps(report_basis, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
     return ChannelPermutationFibreReport(
-        manifest=manifest,
-        report_sha256=_report_sha256(manifest),
-        dataset_sha256=_tensor_sha256(inputs, targets),
-        model_sha256=_model_sha256(model),
+        manifest=manifest_payload,
+        dataset_sha256=dataset_hash,
+        model_sha256=model_hash,
+        report_sha256=report_sha256,
         victim_class=type(model).__name__,
         points=tuple(points),
         summary=summary,
-        quality_gate=gate,
+        quality_gate=quality_gate,
         environment=benchmark_environment_manifest(),
         theorem=(
-            "If F_theta(Px)=P F_theta(x) for every channel permutation P and the "
-            "loss is invariant under simultaneous permutation of prediction and "
-            "target, then grad_theta L(F_theta(Px), Py)=grad_theta L(F_theta(x), y). "
-            "The observation fibre contains the full simultaneous channel orbit."
+            "Every adjacent channel transposition leaves the full gradient invariant; "
+            "because adjacent transpositions generate S_C, the full simultaneous "
+            "channel-permutation orbit is one observation fibre."
         ),
         claim_boundary=(
-            "This bound treats channel identities and their ordering as part of the "
-            "private training object and assumes both histories and targets are private. "
-            "If ordered targets are public, or channel permutations are declared an "
-            "acceptable target equivalence, the exact labeled-order ceiling does not apply."
+            "The private target contains both ordered input histories and ordered "
+            "forecast targets. Public channel labels, channel-indexed parameters, "
+            "channel-specific heads, or a recovery target defined modulo permutation "
+            "change the threat model."
         ),
     )
