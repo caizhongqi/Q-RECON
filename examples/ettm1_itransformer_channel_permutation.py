@@ -43,7 +43,10 @@ def main() -> None:
         },
         attack={
             "prior": "direct",
-            "known_target": True,
+            # The theorem's private object includes both ordered histories and the
+            # corresponding ordered forecast targets. Public ordered targets are a
+            # different side-information model and can break the permutation fibre.
+            "known_target": False,
             "steps": 1,
             "learning_rate": 0.01,
         },
@@ -67,9 +70,10 @@ def main() -> None:
         "generator_set": "all adjacent transpositions generating S_C",
         "private_target": "ordered labeled input histories and forecast targets",
         "claim_boundary": (
-            "The theorem applies to anonymous-channel equivariant models. Public "
-            "channel identities, channel-specific parameters, or an orbit-equivalent "
-            "recovery target require a different observation model."
+            "The theorem applies to anonymous-channel equivariant models with private "
+            "ordered histories and targets. Public target-channel identities, "
+            "channel-specific parameters, or an orbit-equivalent recovery target "
+            "require a different observation model."
         ),
     }
     print(json.dumps(payload, indent=2, sort_keys=True))
