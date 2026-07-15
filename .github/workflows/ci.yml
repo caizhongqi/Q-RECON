@@ -89,6 +89,10 @@ jobs:
         run: |
           python examples/gifteval_patchtst_attack_suite.py \
             > gifteval-patchtst-attack-suite.json
+      - name: Run analytic head-representation inversion
+        run: |
+          python examples/gifteval_patchtst_head_representation.py \
+            > gifteval-patchtst-head-representation.json
       - name: Upload real modern-model calibration reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -97,6 +101,7 @@ jobs:
           path: |
             gifteval-patchtst-calibration.json
             gifteval-patchtst-attack-suite.json
+            gifteval-patchtst-head-representation.json
           if-no-files-found: error
 
   solver-tests:
