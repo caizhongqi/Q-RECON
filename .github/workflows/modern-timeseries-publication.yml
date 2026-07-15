@@ -1,0 +1,129 @@
+name: modern-timeseries-publication
+
+on:
+  push:
+    branches: ["agent/**"]
+    paths:
+      - ".github/workflows/modern-timeseries-publication.yml"
+      - "examples/gifteval_patchtst_*.py"
+      - "examples/ettm1_itransformer_*.py"
+      - "scripts/fetch_pinned_ettm1.py"
+      - "src/qrecon/attacks/**"
+      - "src/qrecon/benchmarks/**"
+      - "src/qrecon/data/**"
+      - "src/qrecon/models/**"
+      - "src/qrecon/metrics.py"
+      - "tests/test_modern_time_series_models.py"
+      - "tests/test_learned_quantile_initializer.py"
+  workflow_dispatch:
+
+# Publication jobs must finish and retain their artifacts even when a later
+# documentation or implementation commit lands on the research branch.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  gifteval-patchtst-calibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Run revision-pinned GIFT-Eval PatchTST calibration
+        run: python examples/gifteval_patchtst_calibration.py > gifteval-patchtst-calibration.json
+      - name: Run paired DLG, InvG, hybrid, and temporal-prior suite
+        run: python examples/gifteval_patchtst_attack_suite.py > gifteval-patchtst-attack-suite.json
+      - name: Run paired TS-Inverse L1 and temporal objective baselines
+        run: python examples/gifteval_patchtst_ts_inverse_comparison.py > gifteval-patchtst-ts-inverse-comparison.json
+      - name: Run analytic head-representation inversion
+        run: python examples/gifteval_patchtst_head_representation.py > gifteval-patchtst-head-representation.json
+      - name: Run paired clipping, quantization, noise, and visibility suite
+        run: python examples/gifteval_patchtst_defense_suite.py > gifteval-patchtst-defense-suite.json
+      - name: Run final-head clipping and perturbation stability audit
+        run: python examples/gifteval_patchtst_head_release_stability.py > gifteval-patchtst-head-release-stability.json
+      - name: Run 20-sample final-head stability study
+        run: python examples/gifteval_patchtst_head_release_stability_publication.py > gifteval-patchtst-head-release-stability-20.json
+      - name: Run 20-sample PatchTST final-head orbit study
+        run: python examples/gifteval_patchtst_final_head_orbit.py > gifteval-patchtst-final-head-orbit.json
+      - name: Run disjoint learned-quantile calibration
+        run: python examples/gifteval_patchtst_learned_quantile_calibration.py > gifteval-patchtst-learned-quantile-calibration.json
+      - name: Upload GIFT-Eval PatchTST reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gifteval-patchtst-publication
+          path: |
+            gifteval-patchtst-calibration.json
+            gifteval-patchtst-attack-suite.json
+            gifteval-patchtst-ts-inverse-comparison.json
+            gifteval-patchtst-head-representation.json
+            gifteval-patchtst-defense-suite.json
+            gifteval-patchtst-head-release-stability.json
+            gifteval-patchtst-head-release-stability-20.json
+            gifteval-patchtst-final-head-orbit.json
+            gifteval-patchtst-learned-quantile-calibration.json
+          if-no-files-found: error
+
+  ettm1-itransformer-calibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Download and verify immutable ETTm1 data
+        run: |
+          python scripts/fetch_pinned_ettm1.py \
+            --output data/ETT-small/ETTm1.csv \
+            --manifest ettm1-source-manifest.json
+      - name: Run real multivariate iTransformer calibration
+        run: python examples/ettm1_itransformer_calibration.py > ettm1-itransformer-calibration.json
+      - name: Run 20-sample iTransformer final-head orbit study
+        run: python examples/ettm1_itransformer_final_head_orbit.py > ettm1-itransformer-final-head-orbit.json
+      - name: Upload ETTm1 reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ettm1-itransformer-publication
+          path: |
+            ettm1-source-manifest.json
+            ettm1-itransformer-calibration.json
+            ettm1-itransformer-final-head-orbit.json
+          if-no-files-found: error
+
+  ts-inverse-objective-publication:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Run 20-window three-seed GIFT-Eval PatchTST L1 study
+        run: |
+          set -o pipefail
+          python examples/gifteval_patchtst_ts_inverse_publication.py \
+            > gifteval-patchtst-ts-inverse-publication.json \
+            2> >(tee gifteval-patchtst-ts-inverse-publication.stderr >&2)
+      - name: Upload TS-Inverse objective report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gifteval-patchtst-ts-inverse-publication
+          path: |
+            gifteval-patchtst-ts-inverse-publication.json
+            gifteval-patchtst-ts-inverse-publication.stderr
+          if-no-files-found: error
