@@ -54,6 +54,11 @@ from .known_target_collisions import (
     target_stabilizer_reflection,
     target_stabilizer_rotation,
 )
+from .known_target_packed_probes import (
+    PackedLinearGradientProbePlan,
+    build_packed_linear_gradient_probe_plan,
+    recover_linear_gradient_oracle_statistics_packed,
+)
 from .known_target_quotient import (
     KnownTargetOrbitInvariants,
     LinearGradientOracleProbeRecovery,
@@ -99,6 +104,7 @@ __all__ = [
     "LinearGradientOracleProbeRecovery",
     "LinearGradientOracleStatistics",
     "LinearGradientOracleValue",
+    "PackedLinearGradientProbePlan",
     "SearchComparison",
     "UniformGradientQueryDifferenceBound",
     "adaptive_gaussian_transcript_success_upper_bound",
@@ -107,6 +113,7 @@ __all__ = [
     "bayes_reconstruction_success",
     "binary_helstrom_success",
     "build_bbht_schedule",
+    "build_packed_linear_gradient_probe_plan",
     "certify_bbht_uniform_success",
     "channel_bayes_equivalence_reconstruction_success",
     "channel_bayes_reconstruction_success",
@@ -141,6 +148,7 @@ __all__ = [
     "postprocess_channel",
     "randomized_grover_round_success",
     "recover_linear_gradient_oracle_statistics",
+    "recover_linear_gradient_oracle_statistics_packed",
     "recover_target_stabilizing_orthogonal_map",
     "symmetric_pair_mixing",
     "target_constraint_matrix",
