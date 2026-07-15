@@ -4,7 +4,6 @@ import hashlib
 import json
 import math
 from dataclasses import asdict, dataclass
-from typing import Any
 
 import numpy as np
 import torch
@@ -24,6 +23,7 @@ from qrecon.experiment import _build_model, _load_dataset, _seed_everything, _tr
 from qrecon.theory import (
     construct_known_target_rotation_collision,
     known_target_orbit_report,
+    target_stabilizer_reflection,
 )
 
 
@@ -40,6 +40,7 @@ class FinalHeadOrbitPoint:
     continuous_orbit_dimension: int
     has_nontrivial_collision: bool
     has_continuous_family: bool
+    collision_kind: str | None
     collision_input_displacement: float | None
     collision_statistic_error: float | None
     collision_actual_weight_gradient_error: float | None
@@ -102,7 +103,9 @@ def _effective_target_rows(targets: torch.Tensor) -> torch.Tensor:
         # head is applied to [batch, channels, feature], so channels are folded
         # into the effective-sample axis in the same order.
         return targets.transpose(1, 2).reshape(-1, targets.shape[1])
-    raise ValueError("forecasting targets must be [batch,horizon] or [batch,horizon,channels]")
+    raise ValueError(
+        "forecasting targets must be [batch,horizon] or [batch,horizon,channels]"
+    )
 
 
 def _mse_head_gradients(
@@ -115,6 +118,21 @@ def _mse_head_gradients(
     residual = predictions - targets
     factor = 2.0 / float(features.shape[0] * targets.shape[1])
     return factor * residual.T @ features, factor * residual.sum(axis=0)
+
+
+def _statistic_error(
+    left: np.ndarray,
+    right: np.ndarray,
+    targets: np.ndarray,
+) -> float:
+    return max(
+        float(np.max(np.abs(a - b)))
+        for a, b in (
+            (left.T @ left, right.T @ right),
+            (left.sum(axis=0), right.sum(axis=0)),
+            (targets.T @ left, targets.T @ right),
+        )
+    )
 
 
 def _data_access_locked(dataset: dict[str, object]) -> bool:
@@ -144,7 +162,12 @@ def analyze_final_head_orbit(
     batch_start: int = 0,
     collision_angle: float = 0.37,
 ) -> FinalHeadOrbitPoint:
-    """Certify the known-target biased-linear gradient orbit at the final head."""
+    """Certify the known-target biased-linear gradient orbit at the final head.
+
+    A complement of dimension at least two admits a continuous rotation. A
+    one-dimensional complement admits a discrete reflection, which is still a
+    valid non-identifiability witness but must not be called a continuous family.
+    """
 
     if not math.isfinite(float(collision_angle)) or collision_angle == 0.0:
         raise ValueError("collision_angle must be finite and nonzero")
@@ -162,26 +185,43 @@ def analyze_final_head_orbit(
     statistic_error: float | None = None
     actual_weight_error: float | None = None
     actual_bias_error: float | None = None
+    collision_kind: str | None = None
+
+    _, head = find_last_biased_linear(model)
+    if head.bias is None:
+        raise ValueError("final head must have a bias")
+    weight = head.weight.detach().cpu().double().numpy()
+    bias = head.bias.detach().cpu().double().numpy()
+
     if orbit.has_nontrivial_collision:
-        collision = construct_known_target_rotation_collision(
-            features,
-            target_rows,
-            angle=float(collision_angle),
-        )
-        displacement = collision.input_displacement
-        statistic_error = collision.statistic_error
-        _, head = find_last_biased_linear(model)
-        weight = head.weight.detach().cpu().double().numpy()
-        if head.bias is None:
-            raise ValueError("final head must have a bias")
-        bias = head.bias.detach().cpu().double().numpy()
+        if orbit.orthogonal_complement_dimension >= 2:
+            collision = construct_known_target_rotation_collision(
+                features,
+                target_rows,
+                weight,
+                bias,
+                angle=float(collision_angle),
+            )
+            transformed = collision.transformed_inputs
+            displacement = collision.input_displacement
+            statistic_error = collision.statistic_error
+            collision_kind = "continuous_rotation"
+        else:
+            transform = target_stabilizer_reflection(target_rows, axis=0)
+            transformed = transform @ features
+            displacement = float(np.linalg.norm(transformed - features))
+            statistic_error = _statistic_error(features, transformed, target_rows)
+            collision_kind = "discrete_reflection"
+
         clean_weight, clean_bias = _mse_head_gradients(
             features, target_rows, weight, bias
         )
         alternative_weight, alternative_bias = _mse_head_gradients(
-            collision.transformed_inputs, target_rows, weight, bias
+            transformed, target_rows, weight, bias
         )
-        actual_weight_error = float(np.linalg.norm(clean_weight - alternative_weight))
+        actual_weight_error = float(
+            np.linalg.norm(clean_weight - alternative_weight)
+        )
         actual_bias_error = float(np.linalg.norm(clean_bias - alternative_bias))
 
     return FinalHeadOrbitPoint(
@@ -196,6 +236,7 @@ def analyze_final_head_orbit(
         continuous_orbit_dimension=orbit.continuous_orbit_dimension,
         has_nontrivial_collision=orbit.has_nontrivial_collision,
         has_continuous_family=orbit.has_continuous_family,
+        collision_kind=collision_kind,
         collision_input_displacement=displacement,
         collision_statistic_error=statistic_error,
         collision_actual_weight_gradient_error=actual_weight_error,
@@ -290,7 +331,8 @@ def run_final_head_orbit_benchmark(
     every_certified = all(
         (not point.has_nontrivial_collision)
         or (
-            point.collision_statistic_error is not None
+            point.collision_kind is not None
+            and point.collision_statistic_error is not None
             and point.collision_actual_weight_gradient_error is not None
             and point.collision_actual_bias_gradient_error is not None
         )
