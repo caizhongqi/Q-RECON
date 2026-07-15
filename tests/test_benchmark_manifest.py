@@ -50,7 +50,7 @@ def _result(
         candidate_count=candidate_count,
         full_word_population=1 << (config.input_dimension * config.input_bits),
         target_codes=(1 + semantic_shift,),
-        private_input=tuple(0 for _ in range(config.input_dimension)),
+        private_record=tuple(0 for _ in range(config.input_dimension)),
         solution_count=1,
         uniquely_identifiable_on_domain=True,
         branch_and_bound=DummyBranchAndBoundReport(),
