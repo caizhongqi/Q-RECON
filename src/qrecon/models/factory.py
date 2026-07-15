@@ -4,7 +4,7 @@ from typing import Any
 
 from torch import nn
 
-from .modern_time_series import ITransformer, PatchTST, TransformerForecaster
+from .modern_time_series import ITransformer, PatchTST, RevIN, TransformerForecaster
 from .time_series import ForecastMLP
 
 FORECASTING_ARCHITECTURES = (
@@ -17,6 +17,31 @@ FORECASTING_ARCHITECTURES = (
 
 def _architecture_name(value: object) -> str:
     return str(value).strip().lower().replace("-", "").replace("_", "")
+
+
+def _install_declared_revin(
+    model: nn.Module,
+    *,
+    input_channels: int,
+    enabled: bool,
+    affine: bool,
+) -> nn.Module:
+    """Install the exact declared RevIN contract on a modern forecasting model.
+
+    The model constructors retain their backward-compatible ``revin`` switch.  The
+    factory additionally supports ``revin_affine=false`` by replacing the default
+    affine RevIN module with a parameter-free module.  This matters for privacy
+    experiments: non-affine RevIN preserves anonymous-channel permutation symmetry,
+    while learned per-channel affine parameters attach identities to channel slots.
+    """
+
+    if not hasattr(model, "revin"):
+        return model
+    if not enabled:
+        setattr(model, "revin", None)
+        return model
+    setattr(model, "revin", RevIN(int(input_channels), affine=bool(affine)))
+    return model
 
 
 def build_forecasting_model(
@@ -36,6 +61,8 @@ def build_forecasting_model(
             )
         return ForecastMLP(context, horizon, int(config.get("hidden", 64)))
 
+    revin_enabled = bool(config.get("revin", True))
+    revin_affine = bool(config.get("revin_affine", True))
     common = {
         "context": int(context),
         "horizon": int(horizon),
@@ -46,18 +73,18 @@ def build_forecasting_model(
         "d_ff": int(config.get("d_ff", 128)),
         "dropout": float(config.get("dropout", 0.1)),
         "activation": str(config.get("activation", "gelu")),
-        "revin": bool(config.get("revin", True)),
+        "revin": revin_enabled,
     }
     if architecture in {
         "transformer",
         "transformerencoder",
         "vanillatransformer",
     }:
-        return TransformerForecaster(**common)
-    if architecture in {"patchtst", "patchtransformer"}:
+        model: nn.Module = TransformerForecaster(**common)
+    elif architecture in {"patchtst", "patchtransformer"}:
         patch_len = int(config.get("patch_len", min(16, context)))
         stride = int(config.get("stride", min(8, patch_len)))
-        return PatchTST(
+        model = PatchTST(
             **common,
             patch_len=patch_len,
             stride=stride,
@@ -65,10 +92,18 @@ def build_forecasting_model(
             head_dropout=float(config.get("head_dropout", 0.0)),
             individual_head=bool(config.get("individual_head", False)),
         )
-    if architecture in {"itransformer", "invertedtransformer"}:
-        return ITransformer(**common)
-    supported = ", ".join(FORECASTING_ARCHITECTURES)
-    raise ValueError(
-        f"unknown forecasting architecture {config.get('architecture')!r}; "
-        f"supported architectures: {supported}"
+    elif architecture in {"itransformer", "invertedtransformer"}:
+        model = ITransformer(**common)
+    else:
+        supported = ", ".join(FORECASTING_ARCHITECTURES)
+        raise ValueError(
+            f"unknown forecasting architecture {config.get('architecture')!r}; "
+            f"supported architectures: {supported}"
+        )
+
+    return _install_declared_revin(
+        model,
+        input_channels=int(input_channels),
+        enabled=revin_enabled,
+        affine=revin_affine,
     )
