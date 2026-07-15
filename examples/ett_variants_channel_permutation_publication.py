@@ -25,6 +25,11 @@ DATASETS = (
         "path": "data/ETT-small/ETTh1.csv",
         "sha256": "f18de3ad269cef59bb07b5438d79bb3042d3be49bdeecf01c1cd6d29695ee066",
     },
+    {
+        "name": "etth2",
+        "path": "data/ETT-small/ETTh2.csv",
+        "sha256": "a3dc2c597b9218c7ce1cd55eb77b283fd459a1d09d753063f944967dd6b9218b",
+    },
 )
 
 ARCHITECTURES = (
@@ -171,7 +176,7 @@ def main() -> None:
             )
 
     declaration = {
-        "schema_version": "qrecon.cross-dataset-channel-permutation.v3",
+        "schema_version": "qrecon.cross-dataset-channel-permutation.v4",
         "datasets": list(DATASETS),
         "architectures": list(ARCHITECTURES),
         "windows_per_cell": 20,
@@ -188,7 +193,7 @@ def main() -> None:
             "publication_evaluation_dtype": RELEASE_EVALUATION_DTYPE,
             "reason": (
                 "One float32 ETTh1 residual crossed the declared 1e-3 rounding boundary. "
-                "The failed artifact is retained. The publication rerun keeps the same "
+                "The failed artifact is retained. Publication replication keeps the same "
                 "quantizer and evaluates the fixed trained model in predeclared float64 "
                 "rather than weakening the release mechanism or relaxing the tolerance."
             ),
@@ -202,9 +207,12 @@ def main() -> None:
         "declaration_sha256": declaration_sha256,
         "reports": reports,
         "quality_gate": {
-            "two_additional_real_datasets": len(DATASETS) == 2,
+            "three_additional_real_datasets": len(DATASETS) == 3,
             "two_modern_architectures": len(ARCHITECTURES) == 2,
             "twenty_windows_per_cell": True,
+            "one_hundred_twenty_primary_points": (
+                len(DATASETS) * len(ARCHITECTURES) * 20 == 120
+            ),
             "all_sources_sha256_locked": True,
             "float64_release_audit_declared_before_evaluation": True,
             "all_fibre_and_release_gates_passed": global_pass,
@@ -214,9 +222,9 @@ def main() -> None:
         "conclusion": (
             "The anonymous-channel full-gradient orbit and its closure under clipping, "
             "fixed 8-bit quantization at scale 1e-3, label-independent Gaussian noise "
-            "and partial parameter visibility are reproduced across ETTm2 and ETTh1 for "
-            "both iTransformer and shared-head channel-independent PatchTST. Release "
-            "computations use the predeclared float64 numerical audit contract."
+            "and partial parameter visibility are reproduced across ETTm2, ETTh1 and "
+            "ETTh2 for both iTransformer and shared-head channel-independent PatchTST. "
+            "Release computations use the predeclared float64 numerical audit contract."
         ),
         "claim_boundary": (
             "This cross-dataset result concerns exact labeled channel order when both "
