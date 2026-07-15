@@ -151,10 +151,8 @@ class ChannelPermutationGradientWitness:
 
     @property
     def nontrivial_private_collision(self) -> bool:
-        return (
-            self.fibre_bound.orbit_size > 1
-            and self.input_displacement_l2 > 0.0
-            and self.target_displacement_l2 > 0.0
+        return self.fibre_bound.orbit_size > 1 and (
+            self.input_displacement_l2 > 0.0 or self.target_displacement_l2 > 0.0
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -188,10 +186,11 @@ def channel_permutation_gradient_witness(
     quantum estimators.
 
     This theorem requires the declared model to contain no channel-indexed learned
-    parameters or metadata. In Q-RECON it applies to iTransformer with ``revin=False``
-    and to channel-independent PatchTST with a shared head and ``revin=False``. It
-    does not apply unchanged to channel-specific heads, channel embeddings, or
-    per-channel affine RevIN parameters.
+    parameters or metadata. In Q-RECON it applies to anonymous-channel iTransformer
+    and shared-head, channel-independent PatchTST when RevIN is absent or has no
+    trainable per-channel affine parameters. It does not apply unchanged to
+    channel-specific heads, channel embeddings, affine per-channel RevIN, or
+    label-dependent channel weights in the loss.
     """
 
     _, channels = _validate_timeseries_pair(inputs, targets)
