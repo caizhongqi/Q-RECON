@@ -18,6 +18,13 @@ from .channel_permutation_release import (
     analyze_channel_permutation_releases,
     run_channel_permutation_release_benchmark,
 )
+from .channel_side_information import (
+    ChannelSideInformationPoint,
+    ChannelSideInformationQualityGate,
+    ChannelSideInformationReport,
+    analyze_public_calibration_side_information,
+    run_channel_side_information_benchmark,
+)
 from .empirical_batch_gradient import (
     EmpiricalBatchGradientFailure,
     EmpiricalBatchGradientPoint,
@@ -138,6 +145,9 @@ __all__ = [
     "ChannelPermutationReleaseQualityGate",
     "ChannelPermutationReleaseReport",
     "ChannelPermutationReleaseVariantPoint",
+    "ChannelSideInformationPoint",
+    "ChannelSideInformationQualityGate",
+    "ChannelSideInformationReport",
     "CollapsedFixedPointMLPBenchmarkResult",
     "ConfidenceInterval",
     "EmpiricalBatchGradientFailure",
@@ -193,6 +203,7 @@ __all__ = [
     "VectorTwoSumReport",
     "analyze_channel_permutation_releases",
     "analyze_final_head_orbit",
+    "analyze_public_calibration_side_information",
     "audit_quantized_candidate_tensor",
     "benchmark_environment_manifest",
     "build_fixed_point_mlp_instance",
@@ -203,6 +214,7 @@ __all__ = [
     "load_real_candidate_set",
     "run_channel_permutation_fibre_benchmark",
     "run_channel_permutation_release_benchmark",
+    "run_channel_side_information_benchmark",
     "run_final_head_orbit_benchmark",
     "run_fixed_point_mlp_benchmark",
     "run_fixed_point_mlp_benchmark_matrix",
