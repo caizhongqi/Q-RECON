@@ -80,6 +80,7 @@ jobs:
         run: |
           pytest -q \
             tests/test_z3_fixed_point_inversion.py \
+            tests/test_z3_deep_fixed_point_inversion.py \
             tests/test_z3_benchmark.py \
             --junitxml=z3-results.xml
       - name: Cross-check SMT, branch-and-bound, coherent verifier, and repeated manifests
@@ -88,6 +89,9 @@ jobs:
           python examples/z3_fixed_point_inversion.py \
             > z3-fixed-point-inversion.json \
             2> >(tee z3-fixed-point-inversion.stderr >&2)
+          python examples/z3_deep_fixed_point_inversion.py \
+            > z3-deep-fixed-point-inversion.json \
+            2> >(tee z3-deep-fixed-point-inversion.stderr >&2)
           python examples/fixed_point_benchmark_matrix.py --z3 \
             > z3-benchmark-matrix.json \
             2> >(tee z3-benchmark-matrix.stderr >&2)
@@ -106,6 +110,8 @@ jobs:
             z3-results.xml
             z3-fixed-point-inversion.json
             z3-fixed-point-inversion.stderr
+            z3-deep-fixed-point-inversion.json
+            z3-deep-fixed-point-inversion.stderr
             z3-benchmark-matrix.json
             z3-benchmark-matrix.stderr
             z3-statistical-report.json
