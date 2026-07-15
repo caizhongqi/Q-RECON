@@ -6,6 +6,10 @@ on:
     paths:
       - "examples/uci_appliances_target_side_information_reconstruction.py"
       - ".github/workflows/uci-target-side-information-reconstruction.yml"
+  pull_request:
+    paths:
+      - "examples/uci_appliances_target_side_information_reconstruction.py"
+      - ".github/workflows/uci-target-side-information-reconstruction.yml"
   workflow_dispatch:
 
 permissions:
