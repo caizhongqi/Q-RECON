@@ -122,7 +122,7 @@ initializer is not uniformly stronger: occasional large failures make its mean
 performance significantly worse. This negative outcome remains in the evidence
 ledger and prevents selective reporting of only improved records.
 
-## 4. Quantized release closure: retained failure and strict rerun
+## 4. Quantized release closure: retained failure and strict reruns
 
 ### 4.1 Retained float32 boundary failure
 
@@ -139,7 +139,7 @@ For ETTh1 × iTransformer, however, one of 20 float32 executions crossed a fixed
 by numerical reduction noise, but the discontinuous quantizer amplified that
 residual to one output step (`0.001`). The failure is retained as evidence.
 
-### 4.2 Predeclared float64 numerical witness
+### 4.2 Predeclared float64 ETTm2/ETTh1 witness
 
 - Workflow run: `29412797449`
 - Artifact: `ett-cross-dataset-channel-permutation`
@@ -167,13 +167,35 @@ quantized releases are bit-identical (`0.0` maximum discrepancy). This confirms
 that the earlier failure was a finite-precision witness failure rather than a
 counterexample to deterministic postprocessing closure.
 
+### 4.3 ETTh2 external replication
+
+- Workflow run: `29413386389`
+- Artifact: `ett-cross-dataset-channel-permutation`
+- Artifact id: `8342123355`
+- Artifact digest:
+  `sha256:73616e894a95fbc72c212f3aee10c2e7c98537efd3d5c82d8f419572c7e91fa7`
+- ETTh2 source SHA256:
+  `a3dc2c597b9218c7ce1cd55eb77b283fd459a1d09d753063f944967dd6b9218b`
+- Quality gate: passed
+
+The expanded experiment covers ETTm2, ETTh1 and ETTh2 with iTransformer and
+shared-head PatchTST: six cells, 20 windows per cell and 120 primary observations.
+All fibre and release gates pass. ETTh2 has orbit size `5040` in every observed
+window. Its maximum float32 fibre witnesses are `3.5763e-7` for iTransformer and
+`5.6252e-7` for PatchTST. Under the float64 release audit, the maximum raw-gradient
+discrepancy is `6.6613e-16` and all five release variants pass `20/20` for both
+architectures. Fixed 8-bit quantized releases are bit-identical.
+
+Across all six cells, the expanded matrix retains the original `1e-3` quantizer,
+uses locked source hashes, and contains no failed release check.
+
 ## 5. Claim boundary after this update
 
 Supported:
 
 - exact channel-permutation non-identifiability for anonymous-channel iTransformer
   and shared-head channel-independent PatchTST;
-- replication over ETTm1, ETTm2 and ETTh1, including larger models and long
+- replication over ETTm1, ETTm2, ETTh1 and ETTh2, including larger models and long
   lookbacks;
 - exact Bayes ceilings for labeled channel order;
 - closure under the declared clipping, quantization, Gaussian-noise and partial
@@ -191,8 +213,8 @@ Not supported:
 - exact reconstruction of all PatchTST training records;
 - hardware speedup claims based on GitHub-hosted runner time.
 
-The current top-tier route is a focused negative theorem paper. The next empirical
-requirements are an additional immutable external dataset, a frozen publication
-environment, and independent theorem/code review. Positive quantum-advantage claims
-remain excluded unless a common-unit `C_Q < C_C` region is established against the
-strongest matched classical pipeline.
+The current top-tier route is a focused negative theorem paper. The remaining
+external gates are a frozen archival release, genuinely pinned-hardware timing if
+runtime comparisons are retained, and independent theorem/code review. Positive
+quantum-advantage claims remain excluded unless a common-unit `C_Q < C_C` region is
+established against the strongest matched classical pipeline.
