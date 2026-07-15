@@ -1,0 +1,90 @@
+name: uci-target-side-information-reconstruction
+
+on:
+  push:
+    branches: ["agent/uci-target-side-information"]
+    paths:
+      - "examples/uci_appliances_target_side_information_reconstruction.py"
+      - ".github/workflows/uci-target-side-information-reconstruction.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uci-target-side-information-${{ github.ref }}-${{ matrix.architecture }}
+  cancel-in-progress: true
+
+jobs:
+  reconstruct:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [itransformer, patchtst]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Q-RECON
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[test]'
+      - name: Download and verify immutable UCI source
+        run: |
+          mkdir -p outputs
+          python scripts/fetch_uci_appliances.py \
+            --output-dir data/UCI-appliances \
+            --manifest outputs/uci-appliances-source.json
+      - name: Verify attack and channel-alignment contracts
+        run: |
+          pytest -q \
+            tests/test_modern_time_series_models.py \
+            tests/test_channel_alignment_metrics.py \
+            tests/test_gradient_release.py \
+            --junitxml=outputs/uci-target-side-information-tests-${{ matrix.architecture }}.xml
+      - name: Run paired private/public future-target experiment
+        run: |
+          python examples/uci_appliances_target_side_information_reconstruction.py \
+            --architecture ${{ matrix.architecture }} \
+            > outputs/uci-target-side-information-${{ matrix.architecture }}.json \
+            2> outputs/uci-target-side-information-${{ matrix.architecture }}.stderr
+      - name: Enforce paired quality gate
+        run: |
+          ARCHITECTURE='${{ matrix.architecture }}' python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          architecture = os.environ["ARCHITECTURE"]
+          payload = json.loads(
+              Path(
+                  f"outputs/uci-target-side-information-{architecture}.json"
+              ).read_text()
+          )
+          gate = payload["quality_gate"]
+          assert gate["passed"] is True
+          assert gate["immutable_non_ett_source"] is True
+          assert gate["modern_anonymous_channel_architecture"] is True
+          assert gate["ten_paired_private_records"] is True
+          assert gate["three_restarts_per_condition"] is True
+          assert gate["private_and_public_ordered_target_conditions"] is True
+          assert gate["all_sixty_attempts_completed"] is True
+          assert gate["every_record_selected_in_both_conditions"] is True
+          assert len(payload["paired_target_visibility_effect"]["paired_records"]) == 10
+          assert payload["attack_contract"]["steps"] == 60
+          assert set(payload["condition_summaries"]) == {"private", "public_ordered"}
+          print(json.dumps(gate, indent=2, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: uci-target-side-information-${{ matrix.architecture }}
+          path: |
+            outputs/uci-appliances-source.json
+            outputs/uci-target-side-information-${{ matrix.architecture }}.json
+            outputs/uci-target-side-information-${{ matrix.architecture }}.stderr
+            outputs/uci-target-side-information-tests-${{ matrix.architecture }}.xml
+          if-no-files-found: error
