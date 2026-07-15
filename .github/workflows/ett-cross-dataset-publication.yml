@@ -35,7 +35,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  ettm2-etth1-modern-models:
+  ett-variant-modern-models:
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -62,7 +62,12 @@ jobs:
           python scripts/fetch_pinned_ett_variants.py etth1 \
             --output data/ETT-small/ETTh1.csv \
             --manifest etth1-source-manifest.json
-      - name: Run 2-dataset by 2-architecture fibre and release matrix
+      - name: Download and verify immutable ETTh2
+        run: |
+          python scripts/fetch_pinned_ett_variants.py etth2 \
+            --output data/ETT-small/ETTh2.csv \
+            --manifest etth2-source-manifest.json
+      - name: Run 3-dataset by 2-architecture fibre and release matrix
         run: |
           set -o pipefail
           python examples/ett_variants_channel_permutation_publication.py \
@@ -77,6 +82,7 @@ jobs:
             ett-release-tests.xml
             ettm2-source-manifest.json
             etth1-source-manifest.json
+            etth2-source-manifest.json
             ett-cross-dataset-channel-permutation.json
             ett-cross-dataset-channel-permutation.stderr
           if-no-files-found: error
