@@ -35,15 +35,23 @@ def load_gifteval(
     context: int = 96,
     horizon: int = 24,
     streaming: bool = True,
+    split: str = "train",
+    revision: str | None = None,
 ) -> TensorDataset:
     """Load compact windows from Salesforce/GiftEval.
 
-    The official dataset contains 144k series and 177M points. Streaming is the
-    default so a reconstruction experiment does not download the full archive.
+    ``revision`` is forwarded to Hugging Face Datasets so publication manifests
+    can pin a commit SHA or immutable tag instead of silently tracking ``main``.
     """
     from datasets import load_dataset
 
-    rows = load_dataset("Salesforce/GiftEval", split="train", streaming=streaming)
+    kwargs: dict[str, object] = {
+        "split": split,
+        "streaming": streaming,
+    }
+    if revision is not None:
+        kwargs["revision"] = revision
+    rows = load_dataset("Salesforce/GiftEval", **kwargs)
     result: list[tuple[np.ndarray, np.ndarray]] = []
     for row in rows:
         pair = _window(np.asarray(row["target"]), context, horizon)
@@ -98,4 +106,3 @@ def synthetic_forecasting(
         assert pair is not None
         windows.append(pair)
     return _as_dataset(windows)
-
