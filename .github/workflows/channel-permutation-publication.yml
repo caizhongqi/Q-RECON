@@ -1,8 +1,7 @@
 name: channel-permutation-publication
 
 on:
-  push:
-    branches: ["agent/**"]
+  pull_request:
     paths:
       - ".github/workflows/channel-permutation-publication.yml"
       - "examples/ettm1_itransformer_channel_permutation.py"
