@@ -99,6 +99,10 @@ jobs:
         run: |
           python examples/gifteval_patchtst_defense_suite.py \
             > gifteval-patchtst-defense-suite.json
+      - name: Run final-head clipping and perturbation stability audit
+        run: |
+          python examples/gifteval_patchtst_head_release_stability.py \
+            > gifteval-patchtst-head-release-stability.json
       - name: Upload real modern-model calibration reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -109,6 +113,7 @@ jobs:
             gifteval-patchtst-attack-suite.json
             gifteval-patchtst-head-representation.json
             gifteval-patchtst-defense-suite.json
+            gifteval-patchtst-head-release-stability.json
           if-no-files-found: error
 
   real-multivariate-calibration:
