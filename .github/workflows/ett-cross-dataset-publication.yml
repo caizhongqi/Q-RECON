@@ -10,8 +10,11 @@ on:
       - "src/qrecon/attacks/gradient_release.py"
       - "src/qrecon/benchmarks/channel_permutation_fibre.py"
       - "src/qrecon/benchmarks/channel_permutation_release.py"
+      - "src/qrecon/benchmarks/channel_permutation_release_precision.py"
       - "src/qrecon/models/**"
       - "src/qrecon/theory/channel_permutation.py"
+      - "tests/test_channel_permutation_release.py"
+      - "tests/test_channel_permutation_release_precision.py"
   pull_request:
     paths:
       - ".github/workflows/ett-cross-dataset-publication.yml"
@@ -20,8 +23,11 @@ on:
       - "src/qrecon/attacks/gradient_release.py"
       - "src/qrecon/benchmarks/channel_permutation_fibre.py"
       - "src/qrecon/benchmarks/channel_permutation_release.py"
+      - "src/qrecon/benchmarks/channel_permutation_release_precision.py"
       - "src/qrecon/models/**"
       - "src/qrecon/theory/channel_permutation.py"
+      - "tests/test_channel_permutation_release.py"
+      - "tests/test_channel_permutation_release_precision.py"
   workflow_dispatch:
 
 concurrency:
@@ -40,6 +46,12 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: pip install -e '.[test]'
+      - name: Verify exact and high-precision release audits
+        run: |
+          pytest -q \
+            tests/test_channel_permutation_release.py \
+            tests/test_channel_permutation_release_precision.py \
+            --junitxml=ett-release-tests.xml
       - name: Download and verify immutable ETTm2
         run: |
           python scripts/fetch_pinned_ett_variants.py ettm2 \
@@ -62,6 +74,7 @@ jobs:
         with:
           name: ett-cross-dataset-channel-permutation
           path: |
+            ett-release-tests.xml
             ettm2-source-manifest.json
             etth1-source-manifest.json
             ett-cross-dataset-channel-permutation.json
