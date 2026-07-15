@@ -87,6 +87,12 @@ from .statistics import (
     summarize_scalar,
 )
 from .tensor_candidates import QuantizedCandidateAudit, audit_quantized_candidate_tensor
+from .ts_inverse_style import (
+    TSInverseStyleAttempt,
+    TSInverseStyleBenchmarkReport,
+    TSInverseStyleQualityGate,
+    run_ts_inverse_style_benchmark,
+)
 
 __all__ = [
     "BenchmarkQualityGate",
@@ -130,6 +136,9 @@ __all__ = [
     "RealBatchGradientManifest",
     "RealBatchGradientPhaseDiagram",
     "ScalarSummary",
+    "TSInverseStyleAttempt",
+    "TSInverseStyleBenchmarkReport",
+    "TSInverseStyleQualityGate",
     "VectorTwoSumReport",
     "audit_quantized_candidate_tensor",
     "benchmark_environment_manifest",
@@ -148,6 +157,7 @@ __all__ = [
     "run_modern_timeseries_defense_suite",
     "run_modern_timeseries_reconstruction_benchmark",
     "run_real_batch_gradient_phase_diagram",
+    "run_ts_inverse_style_benchmark",
     "solve_vector_two_sum",
     "standard_modern_attack_variants",
     "standard_modern_gradient_defenses",
