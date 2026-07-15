@@ -35,6 +35,7 @@ jobs:
           python examples/mlp_oracle_demo.py > mlp-oracle-${{ matrix.python-version }}.json
           python examples/gradient_reconstruction_demo.py > gradient-reconstruction-${{ matrix.python-version }}.json
           python examples/batch_gradient_demo.py > batch-gradient-${{ matrix.python-version }}.json
+          python examples/real_batch_gradient_phase_diagram.py > real-batch-gradient-${{ matrix.python-version }}.json
           python examples/fixed_point_mlp_exact_observation.py > fixed-point-mlp-exact-${{ matrix.python-version }}.json
           python examples/unknown_k_search.py > unknown-k-search-${{ matrix.python-version }}.json
           python examples/unknown_k_cost_envelope.py > unknown-k-cost-${{ matrix.python-version }}.json
@@ -58,6 +59,7 @@ jobs:
             mlp-oracle-${{ matrix.python-version }}.json
             gradient-reconstruction-${{ matrix.python-version }}.json
             batch-gradient-${{ matrix.python-version }}.json
+            real-batch-gradient-${{ matrix.python-version }}.json
             fixed-point-mlp-exact-${{ matrix.python-version }}.json
             unknown-k-search-${{ matrix.python-version }}.json
             unknown-k-cost-${{ matrix.python-version }}.json
