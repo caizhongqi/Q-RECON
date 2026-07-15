@@ -154,6 +154,14 @@ from .reversible import (
     pack_register,
     unpack_register,
 )
+from .unknown_k_costing import (
+    SpecializedClassicalSolverCosts,
+    UnknownKEndToEndCostReport,
+    UnknownKMarkedCostEvaluation,
+    UnknownKQuantumSearchCosts,
+    compare_unknown_k_search_to_specialized_classical,
+    evaluate_unknown_k_quantum_cost,
+)
 
 __all__ = [
     "ANFOracle",
@@ -221,8 +229,12 @@ __all__ = [
     "ReversibleSingleRecordGradientEqualityOracle",
     "ReversibleSingleRecordGradientValueOracle",
     "SingleRecordGradientLeakageSpec",
+    "SpecializedClassicalSolverCosts",
     "SynthesisComparison",
     "TruthTableOracle",
+    "UnknownKEndToEndCostReport",
+    "UnknownKMarkedCostEvaluation",
+    "UnknownKQuantumSearchCosts",
     "affine_range_report",
     "analyze_finite_oracle",
     "append_cdkm_fixed_adder",
@@ -239,6 +251,7 @@ __all__ = [
     "build_truth_table_preimage_index",
     "compare_end_to_end_search_costs",
     "compare_exact_syntheses",
+    "compare_unknown_k_search_to_specialized_classical",
     "compile_model_value_oracle",
     "compile_structure_preserving_affine_equality_oracle",
     "compile_structure_preserving_affine_oracle",
@@ -252,6 +265,7 @@ __all__ = [
     "compile_structure_preserving_threshold_oracle",
     "compile_verifier_oracle",
     "estimate_grover_resources",
+    "evaluate_unknown_k_quantum_cost",
     "exhaustive_fixed_point_mlp_solutions",
     "fixed_point_mlp_output_bounds",
     "gradient_arithmetic_range_report",
