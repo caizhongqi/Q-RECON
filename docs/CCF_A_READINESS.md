@@ -15,7 +15,7 @@ The project separates five layers:
 2. **access layer** — whether the attacker receives classical samples, released
    internals, or a coherent reversible oracle;
 3. **query layer** — how many ideal verifier calls are required, including the
-   unknown-marked-count protocol;
+   unknown-marked-count and zero-solution protocols;
 4. **implementation layer** — how the verifier, candidate domain, state
    preparation, diffusion, precision, measurement, and cleanup are implemented;
 5. **end-to-end layer** — whether the full quantum pipeline beats the strongest
@@ -72,11 +72,14 @@ Required evidence:
 
 Current state: **substantial and increasingly complete within declared scope**.
 Supported families include integer Affine, integer ReLU MLP/deep MLP, exact
-single/batch linear gradients, fixed-point requantization, fixed-point
-Affine-ReLU-Affine value/threshold/exact-output equality, and clean noncontiguous
-product-domain membership. Unsupported semantics are rejected rather than
-silently approximated. Arbitrary-depth fixed-point composition, optimized state
-preparation, and larger-width synthesis remain open.
+single/batch linear gradients, fixed-point requantization, arbitrary-depth
+fixed-point Affine/ReLU value, threshold and exact-output equality oracles, and
+clean noncontiguous product-domain membership. The arbitrary-depth compiler has
+layerwise reachability certificates, retained hidden-register cleanup, one
+shared arithmetic-work register, and exact layer multiplicities
+`(2, ..., 2, 1)`. Unsupported semantics are rejected rather than silently
+approximated. Optimized state preparation, broader overflow/precision studies,
+and larger-width synthesis remain open.
 
 ### Thesis C — end-to-end quantum advantage or a sharp no-advantage boundary
 
@@ -99,7 +102,10 @@ Required evidence:
 - a strict break-even region with uncertainty analysis;
 - scaling trends showing the region is not a one-point artifact.
 
-Current state: **not established**. Q-RECON must not claim Thesis C yet.
+Current state: **not established**. Q-RECON must not claim Thesis C yet. The
+repository can now certify bounded or unbounded no-advantage workload regions
+when an empirical candidate table must be compiled explicitly, but the final
+real-data task and measured common-unit phase diagram remain open.
 
 ## 3. Readiness matrix
 
@@ -109,19 +115,20 @@ Current state: **not established**. Q-RECON must not claim Thesis C yet.
 | information theory | exact/noisy Bayes optimum and data-processing limits | green | extend to the final continuous/noisy task |
 | local identifiability | Jacobian rank used only as a local sufficient certificate | green | calibrated perturbation and stability experiments |
 | global identifiability | collision theorem or exhaustive finite fibre certificate | green for several linear/finite tasks | prove or certify the final nonlinear leakage task |
-| access assumptions | C/W/Q access distinguished explicitly | green | justify construction and attacker rights in final task |
+| access assumptions | C/W/Q access distinguished explicitly | green | fix explicit compilation, physical QRAM, or succinct-generator rights for the final task |
 | finite oracle correctness | value/verifier/phase semantics, inverse, and phase tests | green | retain as an independent regression backend |
 | non-circular construction | structural compiler does not enumerate global candidates | green for structural backends | run construction audit for every final configuration |
 | integer arithmetic compiler | Affine, equality, ReLU MLP, deep MLP | green within declared semantics | optimize depth/ancilla and validate larger widths |
-| fixed-point compiler | requantization, Affine, two-layer ReLU MLP exact equality | yellow-green | arbitrary-depth composition, broader overflow/precision study |
+| fixed-point compiler | requantization and arbitrary-depth Affine/ReLU value/threshold/equality | green within declared semantics | broader overflow/precision study and larger-width synthesis |
 | structured candidate domain | clean finite product-domain membership and composition | yellow-green | interval/grammar priors and priced structured state preparation |
+| empirical candidate access | explicit-table `Nw` compiler probe lower bound, typical circuit lower bound, minterm upper bound, no-advantage workload certificate | green for explicit compilation | instantiate physical QRAM or succinct-generator alternatives separately when claimed |
 | training-leakage compiler | exact single and ordered-batch linear gradients | green within linear scope | nonlinear, partial, aggregated, quantized, and noisy leakages |
 | known-`K` query model | exact standard Grover curve | green as reference only | never use as deployed cost unless `K` is public or priced |
-| unknown-`K` quantum search | finite BBHT schedule and all-positive-`K` success certificate | yellow-green | zero-solution handling, approximate/noisy execution, hardware study |
+| unknown-`K` quantum search | finite BBHT schedules, all-positive-`K` success certificates, staged execution, and one-sided zero-solution decision | green in exact-verifier finite semantics | approximate/noisy execution and hardware study |
 | classical baselines | analytic, branch-and-bound, additive MITM, exact Z3 SMT | yellow-green | MIP/algebraic/optimized continuous suite on the final task |
-| end-to-end cost | setup-aware known/unknown-`K` equations and robust `K` envelope | yellow-green | instantiate one common measured unit and uncertainty ranges |
+| end-to-end cost | setup-aware known/unknown-`K` equations, robust `K` envelope, explicit-table no-advantage regions | yellow-green | instantiate one common measured unit and uncertainty ranges |
 | nonempty advantage region | strict `C_Q < C_C` at matched success | red | final empirical/theoretical contribution |
-| real data | existing GIFT-Eval/Community Forensics gradient inversion | yellow | connect coherent verifier to realistic structured leakage priors |
+| real data | existing GIFT-Eval/Community Forensics gradient inversion and quantized candidate-table loader/auditor | yellow | connect coherent verifier to a realistic identifiable leakage task and prior |
 | statistical quality | deterministic bootstrap/Wilson intervals, balanced-seed checks, failure accounting, scaling fits, environment manifests | yellow-green | pinned runners, repeated within-seed timing, paired ratios, real-data matrix |
 | reproducibility | package, examples, multi-version CI, solver/quantum jobs | green | freeze environments and archive final artifacts |
 | external validity | multiple models, modalities, defenses, access conditions | red-yellow | broaden only after the primary thesis is fixed |
@@ -208,6 +215,13 @@ GitHub Actions wall-clock measurements are presented as hardware-comparable
 performance without pinned runners, warmups, within-instance repetitions,
 affinity controls, and a declared common cost conversion.
 
+### R16 — free empirical-table loading
+
+A real-data candidate table is compiled into a coherent lookup oracle, but its
+`Nw` description probes, circuit construction, memory population, maintenance,
+or amortization are omitted. Physical QRAM and succinct generators must be
+stated as different access models rather than silently substituted.
+
 ## 5. Minimum experiment package
 
 The final paper should have one primary task and at most two supporting tasks.
@@ -228,12 +242,13 @@ The artifact must generate the following automatically.
 - X, CNOT, Toffoli, T-count, T-depth, and logical depth;
 - forward, inverse, domain, phase, and verification calls;
 - rounding/overflow/precision contract;
-- exhaustive or property-based correctness coverage.
+- exhaustive or property-based correctness coverage;
+- explicit table-loading, QRAM-population, or generator-construction cost.
 
 ### 5.3 Search report
 
 - known-`K` reference curve and deployed unknown-`K` protocol;
-- existence/zero-solution assumption;
+- one-sided zero-solution decision rule and exact-verifier assumption;
 - target and certified minimum success;
 - expected and worst-case phase and verification calls;
 - ideal/approximate/noisy success curves;
@@ -274,12 +289,15 @@ in one declared unit, with sensitivity sweeps over:
 - amortized instances `M`;
 - logical/T-state cost and error-correction assumptions;
 - state/domain preparation and reflection cost;
+- explicit data loading, physical QRAM, or succinct generation;
 - oracle precision and operational error;
 - population, fibre size, and unknown-`K` stopping rule;
 - classical memory and timeout budgets.
 
 An advantage region is accepted internally only if it remains nonempty under a
 predeclared robustness envelope and against the best completed classical solver.
+A no-advantage result is accepted only when its lower/upper-bound directions are
+explicit and the certificate covers the declared workload region.
 
 ## 6. Recommended paper shape
 
@@ -289,10 +307,11 @@ A coherent submission should contain four tightly connected contributions.
    final training-leakage setting.
 2. **Compiler theorem.** A clean non-enumerative reversible compiler for the same
    verifier and structured domain, with exact arithmetic and resources.
-3. **Classical boundary.** A theorem or strongest specialized solver suite that
-   prevents an artificial quantum comparison.
+3. **Classical/data-access boundary.** A theorem or strongest specialized solver
+   suite that prevents an artificial quantum comparison and prices coherent
+   access to empirical candidates.
 4. **End-to-end phase diagram.** Information limit, classical cost, quantum cost,
-   precision, and uncertainty on the same axes.
+   data loading, precision, and uncertainty on the same axes.
 
 Everything else should support one of these four claims.
 
@@ -300,22 +319,25 @@ Everything else should support one of these four claims.
 
 Q-RECON has moved well beyond an early CCF-C-style prototype. It now has original
 identifiability and query-optimality results, executable information bounds,
-multiple clean reversible compiler families, structured-domain composition,
-construction-circularity audits, known/unknown-`K` search models, robust cost
-envelopes, analytic/MITM/branch-and-bound/Z3 classical boundaries, balanced-seed
-statistical reports, and extensive automated verification.
+multiple clean reversible compiler families, arbitrary-depth fixed-point
+composition, structured-domain composition, construction-circularity audits,
+known/unknown-`K` and zero-solution search models, robust cost envelopes,
+explicit empirical-table loading/no-advantage certificates, analytic/MITM/
+branch-and-bound/Z3 classical boundaries, balanced-seed statistical reports,
+and extensive automated verification.
 
 It is still not honest to label the repository itself “CCF-A achieved.” The
 remaining gap is concentrated:
 
 - select one nontrivial identifiable real leakage task;
-- extend the compiler and strongest solver suite to that exact task;
+- fix its candidate-access model and extend the compiler and strongest solver
+  suite to that exact task;
 - run pinned-hardware, repeated-timing, multi-scale real-data experiments;
 - calibrate one common end-to-end cost model with uncertainty;
 - demonstrate a robust nonempty advantage region, or prove a sharp no-advantage
   boundary if the region is empty.
 
 A rigorous negative result can be top-tier: proving that identifiability,
-structured classical inversion, domain preparation, oracle construction,
-statistical uncertainty, or fault-tolerant cost eliminates an apparent quantum
-advantage is a valid central contribution.
+structured classical inversion, explicit data loading, domain preparation,
+oracle construction, statistical uncertainty, or fault-tolerant cost eliminates
+an apparent quantum advantage is a valid central contribution.
