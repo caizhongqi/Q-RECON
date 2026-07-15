@@ -45,8 +45,11 @@ Required evidence:
 Current state: **strong foundation**. Aggregate private-label linear regression
 has an explicit continuous collision family. Full exact single-record biased
 linear gradients have a proved nonzero-residual analytic decoder and a
-zero-residual non-identifiable fibre. The final nonlinear or partial-leakage task
-still needs its own collision/injectivity result.
+zero-residual non-identifiable fibre. For fixed known targets, the complete
+biased-linear MSE gradient-oracle fibre is characterized by the target-stabilizer
+orbit, with an exact orbit-dimension formula, identifiable quotient, optimal
+packed query plan, and matching physical lower bound. The final nonlinear or
+partial-leakage task still needs its own collision/injectivity result.
 
 ### Thesis B — clean structure-preserving compilation of reconstruction oracles
 
@@ -119,7 +122,7 @@ Current state: **not established**. Q-RECON must not claim Thesis C yet.
 | end-to-end cost | setup-aware known/unknown-`K` equations and robust `K` envelope | yellow-green | instantiate one common measured unit and uncertainty ranges |
 | nonempty advantage region | strict `C_Q < C_C` at matched success | red | final empirical/theoretical contribution |
 | real data | existing GIFT-Eval/Community Forensics gradient inversion | yellow | connect coherent verifier to realistic structured leakage priors |
-| statistical quality | seeds, intervals, failure/timeout rates, scaling | red-yellow | complete preregistered benchmark matrix |
+| statistical quality | deterministic bootstrap/Wilson intervals, balanced-seed checks, failure accounting, scaling fits, environment manifests | yellow-green | pinned runners, repeated within-seed timing, paired ratios, real-data matrix |
 | reproducibility | package, examples, multi-version CI, solver/quantum jobs | green | freeze environments and archive final artifacts |
 | external validity | multiple models, modalities, defenses, access conditions | red-yellow | broaden only after the primary thesis is fixed |
 
@@ -193,6 +196,18 @@ priced on a different population or an unpriced ideal domain state.
 A timeout, solution limit, or `unknown` SMT result is reported as a complete
 fibre certificate.
 
+### R14 — pseudoreplication or hidden failures
+
+The same `(configuration, seed)` is counted as multiple independent samples,
+solver timeouts are removed from the denominator, skipped checks are called
+successes, or only favorable configurations are retained.
+
+### R15 — shared-runner timing claim
+
+GitHub Actions wall-clock measurements are presented as hardware-comparable
+performance without pinned runners, warmups, within-instance repetitions,
+affinity controls, and a declared common cost conversion.
+
 ## 5. Minimum experiment package
 
 The final paper should have one primary task and at most two supporting tasks.
@@ -233,7 +248,20 @@ The artifact must generate the following automatically.
 - multi-start gradient inversion for continuous priors;
 - preprocessing, time, memory, completion status, and scaling.
 
-### 5.5 End-to-end report
+### 5.5 Statistical report
+
+- predeclared configurations and balanced independent seed sets;
+- no duplicate `(configuration, seed)` observations;
+- Wilson intervals for success, completion, and exact-agreement rates;
+- deterministic bootstrap intervals for scalar means and medians;
+- raw per-instance results, failures, timeouts, and skipped checks;
+- at least three population scales, preferably five or more;
+- paired comparisons on the same generated instances;
+- pinned hardware and repeated within-seed measurements for runtime claims;
+- machine-readable environment and package manifest;
+- exploratory and confirmatory seeds kept separate.
+
+### 5.6 End-to-end report
 
 For every method report
 
@@ -271,22 +299,23 @@ Everything else should support one of these four claims.
 ## 7. Current verdict
 
 Q-RECON has moved well beyond an early CCF-C-style prototype. It now has original
-identifiability results, executable information bounds, multiple clean reversible
-compiler families, structured-domain composition, construction-circularity
-audits, known/unknown-`K` search models, robust cost envelopes, analytic/MITM/
-branch-and-bound/Z3 classical boundaries, and extensive automated verification.
+identifiability and query-optimality results, executable information bounds,
+multiple clean reversible compiler families, structured-domain composition,
+construction-circularity audits, known/unknown-`K` search models, robust cost
+envelopes, analytic/MITM/branch-and-bound/Z3 classical boundaries, balanced-seed
+statistical reports, and extensive automated verification.
 
 It is still not honest to label the repository itself “CCF-A achieved.” The
 remaining gap is concentrated:
 
 - select one nontrivial identifiable real leakage task;
 - extend the compiler and strongest solver suite to that exact task;
-- run statistically sound multi-scale real-data experiments;
+- run pinned-hardware, repeated-timing, multi-scale real-data experiments;
 - calibrate one common end-to-end cost model with uncertainty;
 - demonstrate a robust nonempty advantage region, or prove a sharp no-advantage
   boundary if the region is empty.
 
 A rigorous negative result can be top-tier: proving that identifiability,
-structured classical inversion, domain preparation, oracle construction, or
-fault-tolerant cost eliminates an apparent quantum advantage is a valid central
-contribution.
+structured classical inversion, domain preparation, oracle construction,
+statistical uncertainty, or fault-tolerant cost eliminates an apparent quantum
+advantage is a valid central contribution.
