@@ -73,7 +73,7 @@ def test_domain_restricted_mlp_oracle_matches_complete_classical_solver():
         sorted(oracle.encode_inputs(solution) for solution in classical.solutions)
     )
 
-    assert classical.complete
+    assert not classical.stopped_early
     assert oracle.candidate_count == classical.candidate_count == 4
     assert oracle.marked_inputs() == expected_words
     assert oracle.verify_basis_permutation()
