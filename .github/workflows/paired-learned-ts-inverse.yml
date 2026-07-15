@@ -1,0 +1,47 @@
+name: paired-learned-ts-inverse
+
+on:
+  push:
+    branches: ["agent/**"]
+    paths:
+      - ".github/workflows/paired-learned-ts-inverse.yml"
+      - "examples/gifteval_patchtst_paired_learned_ts_inverse.py"
+      - "src/qrecon/attacks/learned_quantile_initializer.py"
+      - "src/qrecon/attacks/ts_inverse_style.py"
+      - "src/qrecon/benchmarks/learned_ts_inverse.py"
+      - "src/qrecon/benchmarks/paired_learned_ts_inverse.py"
+      - "src/qrecon/benchmarks/modern_timeseries_reconstruction.py"
+      - "src/qrecon/models/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  paired-gifteval-patchtst:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Run paired random versus learned TS-Inverse study
+        run: |
+          set -o pipefail
+          python examples/gifteval_patchtst_paired_learned_ts_inverse.py \
+            > gifteval-patchtst-paired-learned-ts-inverse.json \
+            2> >(tee gifteval-patchtst-paired-learned-ts-inverse.stderr >&2)
+      - name: Upload paired comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gifteval-patchtst-paired-learned-ts-inverse
+          path: |
+            gifteval-patchtst-paired-learned-ts-inverse.json
+            gifteval-patchtst-paired-learned-ts-inverse.stderr
+          if-no-files-found: error
