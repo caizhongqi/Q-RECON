@@ -21,6 +21,10 @@ VARIANTS = {
         "path": "ETT-small/ETTh1.csv",
         "git_blob_sha1": "a52c4925778c07c1ef1a2cf6fd01594919717d9e",
     },
+    "etth2": {
+        "path": "ETT-small/ETTh2.csv",
+        "git_blob_sha1": "6e3760778598fdee5208213d3fce122637307eec",
+    },
 }
 
 
