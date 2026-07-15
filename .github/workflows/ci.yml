@@ -74,7 +74,7 @@ jobs:
 
   real-modern-calibration:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -91,6 +91,10 @@ jobs:
         run: |
           python examples/gifteval_patchtst_attack_suite.py \
             > gifteval-patchtst-attack-suite.json
+      - name: Run paired TS-Inverse L1 and temporal objective baselines
+        run: |
+          python examples/gifteval_patchtst_ts_inverse_comparison.py \
+            > gifteval-patchtst-ts-inverse-comparison.json
       - name: Run analytic head-representation inversion
         run: |
           python examples/gifteval_patchtst_head_representation.py \
@@ -115,6 +119,7 @@ jobs:
           path: |
             gifteval-patchtst-calibration.json
             gifteval-patchtst-attack-suite.json
+            gifteval-patchtst-ts-inverse-comparison.json
             gifteval-patchtst-head-representation.json
             gifteval-patchtst-defense-suite.json
             gifteval-patchtst-head-release-stability.json
