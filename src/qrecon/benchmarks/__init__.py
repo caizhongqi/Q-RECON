@@ -13,6 +13,13 @@ from .empirical_batch_gradient import (
     run_real_batch_gradient_phase_diagram,
     solve_vector_two_sum,
 )
+from .final_head_orbit import (
+    FinalHeadOrbitBenchmarkReport,
+    FinalHeadOrbitPoint,
+    FinalHeadOrbitQualityGate,
+    analyze_final_head_orbit,
+    run_final_head_orbit_benchmark,
+)
 from .fixed_point_mlp import (
     FixedPointMLPBenchmarkConfig,
     FixedPointMLPBenchmarkResult,
@@ -103,6 +110,9 @@ __all__ = [
     "EmpiricalBatchGradientFailure",
     "EmpiricalBatchGradientPoint",
     "EmpiricalCandidateLoadingReport",
+    "FinalHeadOrbitBenchmarkReport",
+    "FinalHeadOrbitPoint",
+    "FinalHeadOrbitQualityGate",
     "FixedPointMLPBenchmarkConfig",
     "FixedPointMLPBenchmarkManifest",
     "FixedPointMLPBenchmarkResult",
@@ -140,6 +150,7 @@ __all__ = [
     "TSInverseStyleBenchmarkReport",
     "TSInverseStyleQualityGate",
     "VectorTwoSumReport",
+    "analyze_final_head_orbit",
     "audit_quantized_candidate_tensor",
     "benchmark_environment_manifest",
     "build_fixed_point_mlp_instance",
@@ -148,6 +159,7 @@ __all__ = [
     "fit_loglog_scaling",
     "load_modern_timeseries_manifest",
     "load_real_candidate_set",
+    "run_final_head_orbit_benchmark",
     "run_fixed_point_mlp_benchmark",
     "run_fixed_point_mlp_benchmark_matrix",
     "run_fixed_point_mlp_manifest",
