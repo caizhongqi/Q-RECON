@@ -127,6 +127,7 @@ python examples/batch_gradient_demo.py
 python examples/fixed_point_mlp_exact_observation.py
 python examples/unknown_k_search.py
 python examples/unknown_k_cost_envelope.py
+python examples/explicit_data_loading_boundary.py
 python examples/z3_fixed_point_inversion.py
 python examples/fixed_point_benchmark_matrix.py
 python examples/fixed_point_statistical_report.py
