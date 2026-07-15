@@ -1,0 +1,50 @@
+name: learned-ts-inverse-publication
+
+on:
+  push:
+    branches: ["agent/**"]
+    paths:
+      - ".github/workflows/learned-ts-inverse-publication.yml"
+      - "examples/gifteval_patchtst_learned_ts_inverse_publication.py"
+      - "src/qrecon/attacks/learned_quantile_initializer.py"
+      - "src/qrecon/attacks/ts_inverse_style.py"
+      - "src/qrecon/benchmarks/learned_ts_inverse.py"
+      - "src/qrecon/benchmarks/modern_timeseries_reconstruction.py"
+      - "src/qrecon/models/**"
+      - "tests/test_learned_quantile_initializer.py"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  learned-quantile-patchtst:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[test]'
+      - name: Verify learned initializer implementation
+        run: pytest -q tests/test_learned_quantile_initializer.py --junitxml=learned-ts-inverse-tests.xml
+      - name: Run revision-pinned learned TS-Inverse PatchTST study
+        run: |
+          set -o pipefail
+          python examples/gifteval_patchtst_learned_ts_inverse_publication.py \
+            > gifteval-patchtst-learned-ts-inverse-publication.json \
+            2> >(tee gifteval-patchtst-learned-ts-inverse-publication.stderr >&2)
+      - name: Upload learned TS-Inverse evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gifteval-patchtst-learned-ts-inverse-publication
+          path: |
+            learned-ts-inverse-tests.xml
+            gifteval-patchtst-learned-ts-inverse-publication.json
+            gifteval-patchtst-learned-ts-inverse-publication.stderr
+          if-no-files-found: error
