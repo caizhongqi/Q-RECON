@@ -1,0 +1,75 @@
+name: uci-appliances-channel-permutation-ablation
+
+on:
+  pull_request:
+    paths:
+      - "scripts/fetch_uci_appliances.py"
+      - "examples/uci_appliances_channel_permutation_ablation.py"
+      - "src/qrecon/models/**"
+      - "src/qrecon/theory/channel_permutation.py"
+      - "src/qrecon/data/**"
+      - ".github/workflows/uci-appliances-channel-permutation-ablation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uci-appliances-ablation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  symmetry-and-controls:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Q-RECON
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[test]'
+      - name: Download and verify immutable UCI source
+        run: |
+          python scripts/fetch_uci_appliances.py \
+            --output-dir data/UCI-appliances \
+            --manifest outputs/uci-appliances-source.json
+      - name: Run symmetry unit tests
+        run: |
+          pytest -q \
+            tests/test_channel_permutation_gradient.py \
+            tests/test_channel_permutation_ablation.py
+      - name: Run independent symmetry-breaking controls
+        run: |
+          python examples/uci_appliances_channel_permutation_ablation.py \
+            > outputs/uci-appliances-channel-permutation-ablation.json \
+            2> outputs/uci-appliances-channel-permutation-ablation.stderr
+      - name: Enforce control quality gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(
+              Path("outputs/uci-appliances-channel-permutation-ablation.json").read_text()
+          )
+          assert payload["quality_gate"]["passed"] is True
+          assert payload["quality_gate"]["two_equivariant_architectures"] is True
+          assert payload["quality_gate"]["two_explicit_symmetry_breaking_controls"] is True
+          variants = {item["name"]: item for item in payload["variants"]}
+          assert variants["itransformer_shared_nonaffine_revin"]["quality_gate_passed"] is True
+          assert variants["patchtst_shared_nonaffine_revin"]["quality_gate_passed"] is True
+          assert variants["itransformer_affine_revin_control"]["quality_gate_passed"] is True
+          assert variants["patchtst_channel_specific_head_control"]["quality_gate_passed"] is True
+          print(json.dumps(payload["quality_gate"], indent=2, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: uci-appliances-channel-permutation-ablation
+          path: |
+            outputs/uci-appliances-source.json
+            outputs/uci-appliances-channel-permutation-ablation.json
+            outputs/uci-appliances-channel-permutation-ablation.stderr
+          if-no-files-found: error
