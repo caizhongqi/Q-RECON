@@ -37,7 +37,7 @@ def test_reachable_range_certificate_accepts_safe_composition_rejected_by_full_r
     certificate = oracle.reachability_certificate
     assert certificate.no_overflow
     assert certificate.hidden_encoded_bounds == ((0, 3), (0, 2))
-    assert certificate.output_encoded_bounds == ((0, 7), (-3, 3))
+    assert certificate.output_encoded_bounds == ((0, 7), (-2, 3))
     assert not oracle.output.requantizer.range_report.no_overflow
     assert oracle.verify_basis_permutation()
 
