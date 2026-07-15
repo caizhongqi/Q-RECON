@@ -8,6 +8,14 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+from .time_series_regularization import (
+    PenaltyLoss,
+    linear_trend_penalty,
+    periodicity_penalty,
+    resolution_consistency_penalty,
+    validate_regularization_weight,
+)
+
 GradientMatchMode = Literal["hybrid", "cosine", "l2", "normalized_l2"]
 LayerWeighting = Literal["tensor", "parameter"]
 
@@ -137,20 +145,53 @@ class GradientInversionAttack:
         layer_weighting: LayerWeighting = "tensor",
         gradient_clip_norm: float | None = None,
         record_every: int | None = None,
+        trend_regularization: float = 0.0,
+        trend_loss: PenaltyLoss = "l1",
+        trend_detach: bool = True,
+        periodicity_regularization: float = 0.0,
+        periodicity_period: int | None = None,
+        periodicity_loss: PenaltyLoss = "l1",
+        low_resolution_regularization: float = 0.0,
+        low_resolution_factor: int = 2,
+        low_resolution_loss: PenaltyLoss = "l1",
         callback: Callable[[int, torch.Tensor], None] | None = None,
     ):
         if steps <= 0:
             raise ValueError("steps must be positive")
         if not math.isfinite(float(learning_rate)) or learning_rate <= 0.0:
             raise ValueError("learning_rate must be finite and positive")
-        if not math.isfinite(float(regularization)) or regularization < 0.0:
-            raise ValueError("regularization must be finite and non-negative")
+        self.regularization = validate_regularization_weight(
+            "regularization", regularization
+        )
+        self.trend_regularization = validate_regularization_weight(
+            "trend_regularization", trend_regularization
+        )
+        self.periodicity_regularization = validate_regularization_weight(
+            "periodicity_regularization", periodicity_regularization
+        )
+        self.low_resolution_regularization = validate_regularization_weight(
+            "low_resolution_regularization", low_resolution_regularization
+        )
         if gradient_clip_norm is not None and (
             not math.isfinite(float(gradient_clip_norm)) or gradient_clip_norm <= 0.0
         ):
             raise ValueError("gradient_clip_norm must be finite and positive when provided")
         if record_every is not None and record_every <= 0:
             raise ValueError("record_every must be positive when provided")
+        if trend_loss not in ("l1", "l2"):
+            raise ValueError("trend_loss must be 'l1' or 'l2'")
+        if periodicity_loss not in ("l1", "l2"):
+            raise ValueError("periodicity_loss must be 'l1' or 'l2'")
+        if low_resolution_loss not in ("l1", "l2"):
+            raise ValueError("low_resolution_loss must be 'l1' or 'l2'")
+        if self.periodicity_regularization > 0.0 and (
+            periodicity_period is None or int(periodicity_period) <= 0
+        ):
+            raise ValueError(
+                "a positive periodicity_regularization requires periodicity_period"
+            )
+        if int(low_resolution_factor) <= 1:
+            raise ValueError("low_resolution_factor must exceed one")
 
         self.model = model
         self.observed = observed_gradients
@@ -161,13 +202,60 @@ class GradientInversionAttack:
         self.target_shape = target_shape
         self.steps = int(steps)
         self.learning_rate = float(learning_rate)
-        self.regularization = float(regularization)
         self.optimizer_name = str(optimizer_name).lower()
         self.match_mode = match_mode
         self.layer_weighting = layer_weighting
         self.gradient_clip_norm = gradient_clip_norm
         self.record_every = record_every
+        self.trend_loss = trend_loss
+        self.trend_detach = bool(trend_detach)
+        self.periodicity_period = (
+            None if periodicity_period is None else int(periodicity_period)
+        )
+        self.periodicity_loss = periodicity_loss
+        self.low_resolution_factor = int(low_resolution_factor)
+        self.low_resolution_loss = low_resolution_loss
         self.callback = callback
+
+    def _weighted_prior_penalty(self, x_hat: torch.Tensor) -> torch.Tensor:
+        penalty = self.regularization * _regularizer(x_hat, self.mode)
+        if self.mode != "timeseries":
+            if any(
+                weight > 0.0
+                for weight in (
+                    self.trend_regularization,
+                    self.periodicity_regularization,
+                    self.low_resolution_regularization,
+                )
+            ):
+                raise ValueError(
+                    "trend, periodicity, and resolution priors require timeseries mode"
+                )
+            return penalty
+        if self.trend_regularization > 0.0:
+            penalty = penalty + self.trend_regularization * linear_trend_penalty(
+                x_hat,
+                loss=self.trend_loss,
+                detach_trend=self.trend_detach,
+            )
+        if self.periodicity_regularization > 0.0:
+            assert self.periodicity_period is not None
+            penalty = penalty + self.periodicity_regularization * periodicity_penalty(
+                x_hat,
+                self.periodicity_period,
+                loss=self.periodicity_loss,
+            )
+        if self.low_resolution_regularization > 0.0:
+            penalty = (
+                penalty
+                + self.low_resolution_regularization
+                * resolution_consistency_penalty(
+                    x_hat,
+                    self.low_resolution_factor,
+                    loss=self.low_resolution_loss,
+                )
+            )
+        return penalty
 
     def run(self) -> AttackResult:
         parameters = list(self.prior.parameters())
@@ -207,9 +295,9 @@ class GradientInversionAttack:
                 mode=self.match_mode,
                 layer_weighting=self.layer_weighting,
             )
-            prior_penalty = _regularizer(x_hat, self.mode)
-            objective = match + self.regularization * prior_penalty
-            return objective, match, prior_penalty, x_hat, target_hat
+            weighted_prior_penalty = self._weighted_prior_penalty(x_hat)
+            objective = match + weighted_prior_penalty
+            return objective, match, weighted_prior_penalty, x_hat, target_hat
 
         def clear_model_gradients() -> None:
             for parameter in self.model.parameters():
