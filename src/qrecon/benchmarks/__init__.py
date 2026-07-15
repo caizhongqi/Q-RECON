@@ -21,6 +21,11 @@ from .fixed_point_mlp import (
     run_fixed_point_mlp_benchmark,
     run_fixed_point_mlp_benchmark_matrix,
 )
+from .head_release_stability import (
+    HeadReleaseStabilityPoint,
+    HeadReleaseStabilityReport,
+    run_head_release_stability_audit,
+)
 from .head_representation_reconstruction import (
     HeadRepresentationBenchmarkAttempt,
     HeadRepresentationBenchmarkReport,
@@ -99,6 +104,8 @@ __all__ = [
     "FixedPointMLPInstance",
     "FixedPointMLPMatrixSummary",
     "GradientRangeCertificate",
+    "HeadReleaseStabilityPoint",
+    "HeadReleaseStabilityReport",
     "HeadRepresentationBenchmarkAttempt",
     "HeadRepresentationBenchmarkReport",
     "LoadedRealCandidateSet",
@@ -135,6 +142,7 @@ __all__ = [
     "run_fixed_point_mlp_benchmark",
     "run_fixed_point_mlp_benchmark_matrix",
     "run_fixed_point_mlp_manifest",
+    "run_head_release_stability_audit",
     "run_head_representation_reconstruction_benchmark",
     "run_modern_timeseries_attack_suite",
     "run_modern_timeseries_defense_suite",
