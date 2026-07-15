@@ -83,6 +83,39 @@ def test_manifest_hash_roundtrip_and_seed_validation():
         )
 
 
+def test_manifest_forwards_the_complete_search_contract():
+    manifest = FixedPointMLPBenchmarkManifest(
+        configurations=(_config(1),),
+        seeds=(7,),
+        repeats_per_seed=1,
+        warmup_runs=0,
+        use_z3=True,
+        z3_timeout_ms=1234,
+        target_success=0.81,
+        bbht_growth_factor=1.2,
+        bbht_attempts_per_stage=3,
+        bbht_max_stages=17,
+    )
+    observed: list[dict[str, object]] = []
+
+    def runner(config, seed, **kwargs):
+        observed.append(dict(kwargs))
+        return _result(config, seed)
+
+    execution = run_fixed_point_mlp_manifest(manifest, runner=runner)
+    assert execution.failure_count == 0
+    assert observed == [
+        {
+            "use_z3": True,
+            "z3_timeout_ms": 1234,
+            "target_success": 0.81,
+            "bbht_growth_factor": 1.2,
+            "bbht_attempts_per_stage": 3,
+            "bbht_max_stages": 17,
+        }
+    ]
+
+
 def test_runner_records_warmups_repeats_and_errors():
     config = _config(1)
     manifest = FixedPointMLPBenchmarkManifest(
