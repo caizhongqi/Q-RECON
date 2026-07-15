@@ -5,9 +5,11 @@ on:
     branches: [main, "agent/**"]
   pull_request:
 
+# Publication experiments can run for hours. Do not cancel a valid experiment
+# merely because a documentation or follow-up code commit lands on the branch.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   unit-tests:
