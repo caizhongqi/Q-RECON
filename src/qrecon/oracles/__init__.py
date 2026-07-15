@@ -80,6 +80,13 @@ from .fixed_point_affine import (
     ReversibleFixedPointAffineValueOracle,
     compile_structure_preserving_fixed_point_affine_oracle,
 )
+from .fixed_point_inversion import (
+    CodeInterval,
+    FixedPointInversionReport,
+    exhaustive_fixed_point_mlp_solutions,
+    fixed_point_mlp_output_bounds,
+    solve_fixed_point_mlp_exact_output,
+)
 from .fixed_point_mlp import (
     FixedPointAffineReLULayout,
     FixedPointMLPLayout,
@@ -152,6 +159,7 @@ __all__ = [
     "BatchGradientMITMReport",
     "BatchGradientRangeReport",
     "ClassicalSearchCosts",
+    "CodeInterval",
     "DeepMLPHiddenLayout",
     "DeepMLPLayout",
     "DeepMLPRangeReport",
@@ -162,6 +170,7 @@ __all__ = [
     "FixedPointAffineLayout",
     "FixedPointAffineReLULayout",
     "FixedPointFormat",
+    "FixedPointInversionReport",
     "FixedPointMLPLayout",
     "FixedPointMLPPredicateLayout",
     "GradientArithmeticRangeReport",
@@ -235,6 +244,8 @@ __all__ = [
     "compile_structure_preserving_threshold_oracle",
     "compile_verifier_oracle",
     "estimate_grover_resources",
+    "exhaustive_fixed_point_mlp_solutions",
+    "fixed_point_mlp_output_bounds",
     "gradient_arithmetic_range_report",
     "ideal_unstructured_search_scale",
     "maximum_t_cost_for_fixed_plan",
@@ -252,6 +263,7 @@ __all__ = [
     "run_structure_preserving_gradient_reconstruction",
     "simulate_grover",
     "solve_batch_gradient_meet_in_the_middle",
+    "solve_fixed_point_mlp_exact_output",
     "unpack_batch_gradient_observation",
     "unpack_register",
 ]
