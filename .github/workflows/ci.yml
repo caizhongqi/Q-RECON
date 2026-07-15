@@ -85,12 +85,18 @@ jobs:
         run: |
           python examples/gifteval_patchtst_calibration.py \
             > gifteval-patchtst-calibration.json
-      - name: Upload real modern-model calibration report
+      - name: Run paired DLG, InvG, hybrid, and temporal-prior suite
+        run: |
+          python examples/gifteval_patchtst_attack_suite.py \
+            > gifteval-patchtst-attack-suite.json
+      - name: Upload real modern-model calibration reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gifteval-patchtst-calibration
-          path: gifteval-patchtst-calibration.json
+          path: |
+            gifteval-patchtst-calibration.json
+            gifteval-patchtst-attack-suite.json
           if-no-files-found: error
 
   solver-tests:
