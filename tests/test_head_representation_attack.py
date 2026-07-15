@@ -9,6 +9,7 @@ from qrecon.attacks import (
     leak_gradients,
     recover_single_effective_head_input,
 )
+from qrecon.identifiability import head_representation_jacobian_report
 from qrecon.models import ITransformer, PatchTST, TransformerForecaster
 from qrecon.quantum import DirectPrior
 
@@ -90,6 +91,31 @@ def test_shared_multivariate_head_rejects_multiple_effective_samples():
             observed,
             effective_samples=3,
         )
+    with pytest.raises(ValueError, match="one effective final-head sample"):
+        head_representation_jacobian_report(model, x)
+
+
+def test_head_representation_jacobian_report_has_valid_dimensions():
+    torch.manual_seed(19)
+    model = PatchTST(
+        4,
+        1,
+        patch_len=2,
+        stride=1,
+        d_model=2,
+        n_heads=1,
+        e_layers=1,
+        d_ff=4,
+        dropout=0.0,
+        revin=False,
+    ).eval()
+    x = torch.randn(1, 4)
+    report = head_representation_jacobian_report(model, x, tolerance=1e-7)
+    captured = capture_final_linear_input(model, x).reshape(-1)
+    assert report.input_dimension == x.numel()
+    assert report.observation_dimension == captured.numel()
+    assert 0 <= report.numerical_rank <= x.numel()
+    assert report.full_column_rank == (report.numerical_rank == x.numel())
 
 
 def test_head_representation_inversion_reduces_released_feature_loss():
