@@ -3,17 +3,25 @@
 ## 1. Motivation
 
 Multivariate forecasting datasets assign semantic labels to variables: for example,
-`HUFL`, `HULL`, and `OT` in ETTm1. A forecasting architecture does not necessarily
-use those labels. Channel-independent PatchTST and an iTransformer without
-channel-indexed parameters can treat the variable axis as an unordered collection.
-This architectural symmetry creates an exact input-level training-gradient fibre.
-It is not an optimizer failure and it is not specific to a weak attack.
+`HUFL`, `HULL`, and `OT` in the ETT family. A forecasting architecture does not
+necessarily use those labels. Shared-head channel-independent PatchTST and an
+iTransformer without channel-indexed parameters treat the variable axis as an
+anonymous collection. This architectural symmetry creates an exact training-data
+observation fibre.
 
-The result below applies to the **complete model gradient**, including every
-attention, feed-forward, projection, positional, normalization-free, and forecasting
-head parameter. It therefore constrains classical white-box reconstruction and any
-quantum procedure whose observation oracle is built only from that released
-gradient.
+The result is not an optimizer failure and it is not specific to a weak attack. It
+applies to:
+
+- the complete model gradient;
+- deterministic first-order optimizer transcripts and final model updates;
+- clipped, quantized, partially visible, and independently randomized gradient
+  releases;
+- classical estimators and coherent quantum query algorithms whose oracle is built
+  only from those observations.
+
+The private object in this document contains both ordered input histories and ordered
+forecast targets. Public semantic channel labels or a recovery target defined only
+modulo permutation are different threat models.
 
 ## 2. Setting
 
@@ -42,8 +50,8 @@ f_\theta(XP)=f_\theta(X)P
 \tag{1}
 \]
 
-for every parameter value `theta`, input batch `X`, and permutation `P`.
-Training uses the mean squared error
+for every parameter value `theta`, input batch `X`, and permutation `P`. Training
+uses the mean squared error
 
 \[
 \mathcal L(\theta;X,Y)
@@ -52,7 +60,7 @@ Training uses the mean squared error
 \tag{2}
 \]
 
-## 3. Full-gradient invariance theorem
+## 3. Full-gradient invariance
 
 ### Theorem 1 — simultaneous channel permutations have identical full gradients
 
@@ -72,32 +80,24 @@ for every `theta`, and consequently
 \tag{4}
 \]
 
-### Proof
+#### Proof
 
 By equivariance,
 
 \[
-f_\theta(XP)-YP
-=
-(f_\theta(X)-Y)P.
+f_\theta(XP)-YP=(f_\theta(X)-Y)P.
 \]
 
 A permutation matrix is orthogonal, so right multiplication preserves the
-Frobenius norm:
+Frobenius norm. This proves (3) as an identity in the model parameters.
+Differentiating that identity proves (4) for every parameter tensor. `□`
 
-\[
-\lVert(f_\theta(X)-Y)P\rVert_F
-=
-\lVert f_\theta(X)-Y\rVert_F.
-\]
+The conclusion concerns the complete parameter-gradient tuple, including attention,
+feed-forward, projection, positional, normalization, and forecasting-head
+parameters. Checking only one selected layer is not sufficient evidence for this
+theorem.
 
-This proves (3) as an identity in the model parameters. Differentiating that
-identity proves (4) for every parameter tensor. `□`
-
-The conclusion is stronger than equality of a selected layer or a final-head
-statistic: the entire released parameter-gradient tuple is identical.
-
-## 4. Exact observation fibre and Bayes ceiling
+## 4. Exact fibre and Bayes ceiling
 
 For channel `c`, define its complete private signature as the concatenation of all
 history and target entries belonging to that labeled channel. Suppose the distinct
@@ -107,9 +107,8 @@ signatures have multiplicities
 m_1,\ldots,m_r,\qquad \sum_jm_j=C.
 \]
 
-Permutations within an identical-signature group do not create a new private
-object. The number of distinct labeled training objects in the simultaneous
-permutation orbit is therefore
+Permutations within an identical-signature group do not create a new private object.
+The number of distinct labeled training objects in the orbit is
 
 \[
 |\mathcal O(X,Y)|
@@ -120,7 +119,7 @@ permutation orbit is therefore
 
 Every orbit member has the same complete gradient by Theorem 1. Under a uniform
 prior on this orbit, the Bayes-optimal probability of recovering the exact labeled
-ordering is at most
+ordering is
 
 \[
 P^*_{\mathrm{ordered}}
@@ -129,32 +128,103 @@ P^*_{\mathrm{ordered}}
 \tag{6}
 \]
 
-For generic distinct channels, `m_j=1` and the ceiling is `1/C!`. For the seven
-ETTm1 variables this is
+For seven distinct channels this is
 
 \[
-\frac{1}{7!}=
-\frac{1}{5040}\approx1.984\times10^{-4}.
+\frac{1}{7!}=\frac{1}{5040}\approx1.984\times10^{-4}.
 \]
 
-No classical or quantum reconstruction algorithm can exceed this ceiling from the
-gradient observation alone. A coherent oracle constructed from the same gradient
-channel is identical on every orbit member and cannot restore the missing semantic
-channel labels.
+For a nonuniform prior, the corresponding optimum is the largest posterior mass of
+an orbit member. External semantic side information can therefore change the Bayes
+risk even though it does not change the equality of the released gradients.
 
-## 5. Architectures covered by the repository
+## 5. Classical and quantum indistinguishability
 
-The theorem applies only when equivariance (1) holds for every parameter value.
-In the current Q-RECON implementations this includes:
+### Corollary 1 — coherent access cannot recover the missing channel order
 
-- `ITransformer(..., revin=False)`, because complete variable histories are tokens,
-  attention and output projection weights are shared, and no channel embedding is
-  present;
-- `PatchTST(..., revin=False, individual_head=False)`, because channels are folded
-  into the batch axis and share the patch projection, encoder, positional embedding,
-  and forecasting head.
+Let an observation oracle be any deterministic function of the full gradient, or a
+clean coherent implementation of that function. Because (4) holds for every
+parameter query, all orbit members induce the same classical oracle function and the
+same unitary oracle. Any adaptive classical transcript and any quantum algorithm's
+final density operator are therefore identical across the orbit.
 
-The theorem does **not** apply unchanged when the model contains:
+Consequently, no number of classical or coherent quantum queries can exceed the
+Bayes ceiling in (6) using this observation channel alone. The statement is
+information-theoretic; it does not rely on computational hardness or a conjectured
+quantum lower bound.
+
+## 6. Multi-step training transcripts
+
+### Theorem 2 — deterministic first-order optimization preserves the fibre
+
+Let the optimizer state be `s_t` and suppose the update is deterministic:
+
+\[
+(\theta_{t+1},s_{t+1})
+=F_t(\theta_t,s_t,g_t),
+\qquad
+g_t=\nabla_\theta\mathcal L(\theta_t;X,Y).
+\tag{7}
+\]
+
+Start two executions from the same parameters and optimizer state, using `(X,Y)`
+and `(XP,YP)`. By Theorem 1 their gradients are equal at `t=0`, so (7) gives equal
+next states. Induction proves equality of every later gradient, optimizer state,
+checkpoint, and final model delta. `□`
+
+This covers deterministic SGD, momentum SGD, Adam, and AdamW. Stochastic data order,
+dropout, or other randomness must either be public/common-coupled or modeled as a
+randomized release channel. The executable certificate uses float64 auditing because
+float32 reduction residuals near zero can be amplified by coordinate-wise adaptive
+normalization even though the exact mathematical trajectories coincide.
+
+## 7. Release-channel closure
+
+### Theorem 3 — postprocessing and independent randomization cannot split the fibre
+
+Let `G(X,Y)` be the exact gradient observation and suppose
+
+\[
+G(XP,YP)=G(X,Y).
+\]
+
+For any deterministic map `h`,
+
+\[
+h(G(XP,YP))=h(G(X,Y)).
+\tag{8}
+\]
+
+For any Markov kernel `K` whose conditional law depends on the private object only
+through `G`,
+
+\[
+K(\cdot\mid G(XP,YP))=K(\cdot\mid G(X,Y)).
+\tag{9}
+\]
+
+Thus global clipping, fixed or adaptive quantization, a fixed subset of visible
+parameter tensors, and additive noise independent of the orbit member cannot improve
+exact channel-order recovery. The same conclusion holds for repeated or adaptive
+releases whose public history is generated from previously indistinguishable
+observations. `□`
+
+The implementation couples randomized mechanisms with the same audit seed to obtain
+a pathwise numerical witness. The theorem itself is equality in distribution; it
+does not assume the attacker observes the noise realization.
+
+## 8. Architectures covered
+
+The theorem applies only when (1) holds for every parameter value. In Q-RECON this
+includes:
+
+- `ITransformer(..., revin=False)`;
+- `ITransformer(..., revin=True, revin_affine=False)`;
+- `PatchTST(..., individual_head=False, revin=False)`;
+- `PatchTST(..., individual_head=False, revin=True, revin_affine=False)`.
+
+Parameter-free RevIN normalizes every channel by the same declared operation and
+preserves permutation equivariance. The theorem does **not** apply unchanged to:
 
 - channel embeddings or variable identifiers;
 - channel-specific forecasting heads;
@@ -162,61 +232,95 @@ The theorem does **not** apply unchanged when the model contains:
 - externally supplied semantic metadata;
 - a loss that weights channels differently using their labels.
 
-These mechanisms can break the symmetry. They do not invalidate the theorem; they
-change the observation model and must be analyzed separately.
+These mechanisms are explicit symmetry-breaking controls, not exceptions to the
+proof.
 
-## 6. Executable certificate
+## 9. Executable certificates
 
-`qrecon.theory.channel_permutation` provides:
+The repository provides:
 
-- `channel_permutation_orbit_size`;
-- `channel_permutation_fibre_bound`;
-- `tensor_channel_permutation_fibre_bound`;
-- `apply_channel_permutation`;
-- `channel_permutation_gradient_witness`.
+- `qrecon.theory.channel_permutation` for orbit sizes, tensor fibres, permutations,
+  and one-step full-gradient witnesses;
+- `qrecon.theory.channel_permutation_training` for deterministic optimizer
+  transcripts, optimizer states, checkpoints, and final model deltas;
+- `qrecon.benchmarks.channel_permutation_fibre` for generator-complete real-data
+  fibre studies;
+- `qrecon.benchmarks.channel_permutation_release` for clipping, quantization,
+  Gaussian noise, partial visibility, and combined release audits.
 
-The witness computes on a concrete model and batch:
-
-- prediction equivariance error;
-- loss difference;
-- maximum absolute difference over every parameter-gradient tensor;
-- relative full-gradient L2 difference;
-- private input/target displacement;
-- orbit size and exact labeled-recovery ceiling.
-
-Unit tests cover both iTransformer and channel-independent PatchTST with nonlinear
-attention and feed-forward blocks. The real-data experiment
-`examples/ettm1_itransformer_channel_permutation.py` evaluates twenty revision-pinned
-ETTm1 windows and fails its publication quality gate unless every window has a
-nontrivial private orbit and full-gradient agreement within the declared numerical
+Adjacent transpositions are checked because they generate the full symmetric group
+`S_C`. Passing every generator proves that the complete simultaneous permutation
+orbit is contained in one observation fibre, subject to the declared numerical
 tolerance.
 
-## 7. Interpretation for Q-RECON
+## 10. Validated empirical evidence
 
-This result extends Q-RECON's negative theory beyond linear regression and additive
-two-sum structure. It gives a modern nonlinear Transformer setting in which exact
-labeled reconstruction is information-theoretically impossible even when the
-attacker receives all parameter gradients with infinite numerical precision.
+### ETTm1
 
-The result separates three recovery targets that must not be conflated:
+GitHub Actions run `29409084808`, artifact
+`ettm1-channel-permutation-publication`, validates:
 
-1. **labeled-channel recovery** — recover the exact semantic variable ordering;
-2. **orbit recovery** — recover the unordered set of channel histories and targets;
+- 20 immutable ETTm1 windows;
+- generator-complete iTransformer full-gradient fibres;
+- shared-head PatchTST as a second equivariant architecture;
+- a channel-specific PatchTST head as a symmetry-breaking control;
+- three-step AdamW gradient, optimizer-state, checkpoint, and model-delta equality;
+- full, clipped, fixed-quantized, Gaussian-noisy, partial, and combined releases.
+
+All publication gates pass. For the anonymous iTransformer, all 20 AdamW transcripts
+are certified identical; the maximum observed full-gradient discrepancy is below
+`3e-15` in the float64 audit, and the uniform exact labeled-order ceiling is
+`1/5040`. The channel-specific control breaks the transcript on all 20 windows.
+
+### ETTm2 and ETTh1
+
+GitHub Actions run `29409660763`, artifact
+`ett-cross-dataset-channel-permutation`, validates four cells:
+
+- ETTm2 × iTransformer;
+- ETTm2 × shared-head PatchTST;
+- ETTh1 × iTransformer;
+- ETTh1 × shared-head PatchTST.
+
+Each cell contains 20 immutable real windows. Every fibre and release quality gate
+passes. ETTh1 has orbit size `5040` on all 20 windows. ETTm2 has orbit size `5040`
+on 18 windows and `2520` on two windows because one pair of complete private channel
+signatures is duplicated. Every declared clipping, quantization, noise, and partial
+visibility check remains inside the same observation fibre.
+
+Together with ETTm1, the validated main matrix covers 120 modern-model real-data
+windows across three datasets and two architecture families, plus explicit
+symmetry-breaking controls and multi-step training/release studies.
+
+## 11. Interpretation for reconstruction research
+
+The theorem separates three recovery targets:
+
+1. **exact labeled-channel recovery** — recover the original semantic ordering;
+2. **orbit recovery** — recover an unordered representative modulo channel
+   permutation;
 3. **numerical consistency** — find any candidate producing the released gradient.
 
-A gradient-matching optimizer may succeed at (3) while necessarily failing at (1).
-Paper experiments must therefore report the declared target equivalence and the
-orbit-aware Bayes ceiling before interpreting reconstruction error.
+A gradient-matching attack can succeed at (3), and potentially at (2), while exact
+success at (1) remains bounded by (6). Papers must therefore state the target
+equivalence before converting MSE or gradient matching into a privacy claim.
 
-## 8. Claim boundary
+## 12. Claim boundary
 
-The theorem is an impossibility result for anonymous-channel equivariant models.
-It does not show that all PatchTST or iTransformer deployments hide channel labels,
-and it does not imply that the unordered orbit representative is unrecoverable. A
-top-tier claim should combine this theorem with:
+This is an impossibility theorem for anonymous-channel equivariant forecasting
+models when the ordered histories and ordered future targets are private. It does not
+show that all PatchTST or iTransformer deployments hide channel labels, and it does
+not prove that an unordered orbit representative is unrecoverable. Public semantic
+channel labels, channel-specific parameters, known ordered targets, or strong
+external distributional priors can reduce or eliminate the ambiguity.
 
-- real-data verification over multiple architectures and channel counts;
-- explicit symmetry-breaking ablations;
-- partial, clipped, quantized, and noisy gradient releases;
-- orbit-aware attack metrics;
-- a statement of whether semantic variable labels are public side information.
+The defensible top-tier claim is therefore narrower and stronger than a generic
+attack claim:
+
+> For a declared anonymous-channel threat model, modern nonlinear forecasting
+> Transformers have exact full-gradient training-data fibres whose labeled-order
+> ambiguity survives coherent quantum queries, deterministic multi-step optimizers,
+> clipping, quantization, independent noise, and partial gradient visibility.
+
+Any broader statement must introduce and analyze the additional side-information
+channel explicitly.
