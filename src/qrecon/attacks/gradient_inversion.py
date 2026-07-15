@@ -35,11 +35,15 @@ def gradient_matching_loss(
     candidate_norm = torch.zeros((), device=candidate[0].device)
     observed_norm = torch.zeros((), device=candidate[0].device)
     for left, right in zip(candidate, observed):
-        relative = relative + (left - right).square().sum() / (right.square().sum() + 1e-12)
+        relative = relative + (left - right).square().sum() / (
+            right.square().sum() + 1e-12
+        )
         cosine_num = cosine_num + (left * right).sum()
         candidate_norm = candidate_norm + left.square().sum()
         observed_norm = observed_norm + right.square().sum()
-    cosine = cosine_num / (candidate_norm.sqrt() * observed_norm.sqrt() + 1e-12)
+    cosine = cosine_num / (
+        candidate_norm.sqrt() * observed_norm.sqrt() + 1e-12
+    )
     return relative / max(len(candidate), 1) + 0.1 * (1.0 - cosine)
 
 
@@ -49,7 +53,13 @@ def _regularizer(x: torch.Tensor, mode: str) -> torch.Tensor:
         horizontal = (x[..., :, 1:] - x[..., :, :-1]).abs().mean()
         return vertical + horizontal
     if mode == "timeseries":
-        return (x[..., 1:] - x[..., :-1]).square().mean()
+        if x.ndim < 2 or x.shape[1] <= 1:
+            return torch.zeros((), device=x.device, dtype=x.dtype)
+        # Q-RECON uses [batch, time] and [batch, time, channels]. The temporal
+        # axis is therefore dimension one in both univariate and multivariate
+        # experiments; regularizing the last axis would incorrectly smooth
+        # channels in a multivariate PatchTST/iTransformer attack.
+        return (x[:, 1:, ...] - x[:, :-1, ...]).square().mean()
     return torch.zeros((), device=x.device)
 
 
@@ -94,14 +104,20 @@ class GradientInversionAttack:
         target_parameter: nn.Parameter | None = None
         if self.known_target is None:
             if self.task == "classification":
-                raise ValueError("classification attacks currently require a known/inferred label")
+                raise ValueError(
+                    "classification attacks currently require a known/inferred label"
+                )
             target_parameter = nn.Parameter(torch.zeros(self.target_shape))
             parameters.append(target_parameter)
         history: list[dict[str, float]] = []
 
-        def objective_and_parts() -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        def objective_and_parts() -> tuple[
+            torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor
+        ]:
             x_hat = self.prior()
-            target_hat = self.known_target if target_parameter is None else target_parameter
+            target_hat = (
+                self.known_target if target_parameter is None else target_parameter
+            )
             dummy_loss = _task_loss(self.model(x_hat), target_hat, self.task)
             dummy_gradients = torch.autograd.grad(
                 dummy_loss, tuple(self.model.parameters()), create_graph=True
@@ -129,7 +145,9 @@ class GradientInversionAttack:
                 objective, match, prior_penalty, x_hat = objective_and_parts()
                 objective.backward()
                 closure_calls += 1
-                if closure_calls == 1 or closure_calls % max(1, self.steps // 20) == 0:
+                if closure_calls == 1 or closure_calls % max(
+                    1, self.steps // 20
+                ) == 0:
                     history.append(
                         {
                             "step": float(closure_calls),
@@ -164,5 +182,9 @@ class GradientInversionAttack:
         else:
             raise ValueError(f"unknown optimizer: {self.optimizer_name}")
 
-        final_target = self.known_target if target_parameter is None else target_parameter.detach()
+        final_target = (
+            self.known_target
+            if target_parameter is None
+            else target_parameter.detach()
+        )
         return AttackResult(self.prior().detach(), final_target.detach(), history)
