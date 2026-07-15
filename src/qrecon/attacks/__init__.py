@@ -31,6 +31,15 @@ from .time_series_regularization import (
     periodicity_penalty,
     resolution_consistency_penalty,
 )
+from .ts_inverse_style import (
+    TS_INVERSE_REFERENCE,
+    TSInverseStyleAttack,
+    TSInverseStyleComponents,
+    joint_forecasting_sequence,
+    l1_gradient_distance,
+    quantile_bound_hinge_penalty,
+    temporal_total_variation_l1,
+)
 
 __all__ = [
     "AttackResult",
@@ -42,6 +51,9 @@ __all__ = [
     "HeadRepresentationInversionAttack",
     "LinearHeadLeakageReport",
     "ReleasedGradientInversionAttack",
+    "TS_INVERSE_REFERENCE",
+    "TSInverseStyleAttack",
+    "TSInverseStyleComponents",
     "capture_final_linear_input",
     "clip_gradient_tuple",
     "find_last_biased_linear",
@@ -49,12 +61,16 @@ __all__ = [
     "gradient_tuple_l2_norm",
     "infer_class_label_from_last_bias",
     "invert_first_linear_gradient",
+    "joint_forecasting_sequence",
+    "l1_gradient_distance",
     "last_biased_linear_parameter_indices",
     "leak_gradients",
     "linear_trend_penalty",
     "periodicity_penalty",
+    "quantile_bound_hinge_penalty",
     "quantize_gradient_tuple",
     "recover_single_effective_head_input",
     "release_gradients",
     "resolution_consistency_penalty",
+    "temporal_total_variation_l1",
 ]
