@@ -76,8 +76,13 @@ jobs:
             --junitxml=z3-results.xml
       - name: Cross-check SMT, branch-and-bound, and coherent verifier
         run: |
-          python examples/z3_fixed_point_inversion.py > z3-fixed-point-inversion.json
-          python examples/fixed_point_benchmark_matrix.py --z3 > z3-benchmark-matrix.json
+          set -o pipefail
+          python examples/z3_fixed_point_inversion.py \
+            > z3-fixed-point-inversion.json \
+            2> >(tee z3-fixed-point-inversion.stderr >&2)
+          python examples/fixed_point_benchmark_matrix.py --z3 \
+            > z3-benchmark-matrix.json \
+            2> >(tee z3-benchmark-matrix.stderr >&2)
       - name: Upload SMT baseline report
         if: always()
         uses: actions/upload-artifact@v4
@@ -86,7 +91,9 @@ jobs:
           path: |
             z3-results.xml
             z3-fixed-point-inversion.json
+            z3-fixed-point-inversion.stderr
             z3-benchmark-matrix.json
+            z3-benchmark-matrix.stderr
           if-no-files-found: warn
 
   quantum-smoke:
