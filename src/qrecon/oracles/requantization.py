@@ -140,7 +140,14 @@ def _allocate_requantization_layout(
 
 
 class ReversibleFixedPointRequantizationOracle:
-    """Clean deterministic fixed-point downscaling with half-away-from-zero ties."""
+    """Clean deterministic fixed-point downscaling with half-away-from-zero ties.
+
+    With ``require_no_overflow=True`` the full source register must map into the
+    target format.  A composed compiler may set it to ``False`` only after it has
+    separately certified that every *reachable* source word is representable.
+    The circuit remains a total reversible permutation, but the reference
+    fixed-point semantics are then certified only on that reachable subset.
+    """
 
     def __init__(
         self,
@@ -155,6 +162,7 @@ class ReversibleFixedPointRequantizationOracle:
             raise OverflowError("a signed full-domain source cannot fit an unsigned target")
         self.source_format = source_format
         self.target_format = target_format
+        self.require_no_overflow = bool(require_no_overflow)
         self.shift = source_format.fractional_bits - target_format.fractional_bits
         result_minimum = rescale_code(
             source_format.min_code,
@@ -176,10 +184,11 @@ class ReversibleFixedPointRequantizationOracle:
             target_format.max_code,
             safe,
         )
-        if not safe:
+        if not safe and self.require_no_overflow:
             raise OverflowError(
-                "requantized source range does not fit target format; modular overflow "
-                "and saturation lowering are intentionally unsupported"
+                "requantized source range does not fit target format; set "
+                "require_no_overflow=False only inside a composition that separately "
+                "certifies all reachable source words"
             )
 
         magnitude_bits = max(source_format.bits + 1, self.shift + 1)
@@ -251,6 +260,15 @@ class ReversibleFixedPointRequantizationOracle:
     def output_bits(self) -> int:
         return self.target_format.bits
 
+    def source_word_is_representable(self, input_word: int) -> bool:
+        source_code = self.source_format.word_to_code(input_word)
+        result = rescale_code(
+            source_code,
+            self.source_format.fractional_bits,
+            self.target_format.fractional_bits,
+        )
+        return self.target_format.contains(result)
+
     def evaluate_input_word(self, input_word: int) -> int:
         source_code = self.source_format.word_to_code(input_word)
         target_code = self.target_format.requantize(
@@ -287,9 +305,16 @@ class ReversibleFixedPointRequantizationOracle:
             raise ValueError("clean oracle requires ancillas initialized to zero")
         return self._extract(self.circuit.apply_inverse_state(self._pack_state(input_word, output_word)))
 
-    def verify_basis_permutation(self, *, exhaustive_output_words: bool = True) -> bool:
+    def verify_basis_permutation(
+        self,
+        *,
+        exhaustive_output_words: bool = True,
+        certified_inputs_only: bool = True,
+    ) -> bool:
         outputs = range(1 << self.output_bits) if exhaustive_output_words else (0, 1)
         for input_word in range(1 << self.input_bits):
+            if certified_inputs_only and not self.source_word_is_representable(input_word):
+                continue
             expected = self.evaluate_input_word(input_word)
             for output_word in outputs:
                 forward = self.apply(input_word, output_word)
