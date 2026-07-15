@@ -31,6 +31,14 @@ from .manifest import (
     run_fixed_point_mlp_manifest,
     summarize_manifest_execution,
 )
+from .modern_timeseries_attack_suite import (
+    ModernAttackSuiteAttempt,
+    ModernAttackSuiteQualityGate,
+    ModernAttackSuiteReport,
+    ModernAttackVariant,
+    run_modern_timeseries_attack_suite,
+    standard_modern_attack_variants,
+)
 from .modern_timeseries_reconstruction import (
     MODERN_FORECASTING_ARCHITECTURES,
     ModernAttackAttempt,
@@ -84,6 +92,10 @@ __all__ = [
     "ManifestExecution",
     "ManifestStatisticalReport",
     "ModernAttackAttempt",
+    "ModernAttackSuiteAttempt",
+    "ModernAttackSuiteQualityGate",
+    "ModernAttackSuiteReport",
+    "ModernAttackVariant",
     "ModernTimeSeriesAttackManifest",
     "ModernTimeSeriesBenchmarkReport",
     "ModernTimeSeriesQualityGate",
@@ -104,9 +116,11 @@ __all__ = [
     "run_fixed_point_mlp_benchmark",
     "run_fixed_point_mlp_benchmark_matrix",
     "run_fixed_point_mlp_manifest",
+    "run_modern_timeseries_attack_suite",
     "run_modern_timeseries_reconstruction_benchmark",
     "run_real_batch_gradient_phase_diagram",
     "solve_vector_two_sum",
+    "standard_modern_attack_variants",
     "summarize_fixed_point_mlp_benchmark_matrix",
     "summarize_manifest_execution",
     "summarize_proportion",
