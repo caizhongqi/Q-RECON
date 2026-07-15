@@ -44,6 +44,14 @@ from .modern_timeseries_attack_suite import (
     run_modern_timeseries_attack_suite,
     standard_modern_attack_variants,
 )
+from .modern_timeseries_defense_suite import (
+    ModernDefenseAttempt,
+    ModernDefenseSuiteQualityGate,
+    ModernDefenseSuiteReport,
+    ModernGradientDefenseVariant,
+    run_modern_timeseries_defense_suite,
+    standard_modern_gradient_defenses,
+)
 from .modern_timeseries_reconstruction import (
     MODERN_FORECASTING_ARCHITECTURES,
     ModernAttackAttempt,
@@ -103,6 +111,10 @@ __all__ = [
     "ModernAttackSuiteQualityGate",
     "ModernAttackSuiteReport",
     "ModernAttackVariant",
+    "ModernDefenseAttempt",
+    "ModernDefenseSuiteQualityGate",
+    "ModernDefenseSuiteReport",
+    "ModernGradientDefenseVariant",
     "ModernTimeSeriesAttackManifest",
     "ModernTimeSeriesBenchmarkReport",
     "ModernTimeSeriesQualityGate",
@@ -125,10 +137,12 @@ __all__ = [
     "run_fixed_point_mlp_manifest",
     "run_head_representation_reconstruction_benchmark",
     "run_modern_timeseries_attack_suite",
+    "run_modern_timeseries_defense_suite",
     "run_modern_timeseries_reconstruction_benchmark",
     "run_real_batch_gradient_phase_diagram",
     "solve_vector_two_sum",
     "standard_modern_attack_variants",
+    "standard_modern_gradient_defenses",
     "summarize_fixed_point_mlp_benchmark_matrix",
     "summarize_manifest_execution",
     "summarize_proportion",
