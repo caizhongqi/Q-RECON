@@ -8,6 +8,16 @@ from .fixed_point_mlp import (
     run_fixed_point_mlp_benchmark,
     run_fixed_point_mlp_benchmark_matrix,
 )
+from .manifest import (
+    BenchmarkRunRecord,
+    CollapsedFixedPointMLPBenchmarkResult,
+    FixedPointMLPBenchmarkManifest,
+    ManifestExecution,
+    ManifestStatisticalReport,
+    collapse_manifest_measurements,
+    run_fixed_point_mlp_manifest,
+    summarize_manifest_execution,
+)
 from .statistics import (
     BenchmarkQualityGate,
     ConfidenceInterval,
@@ -25,21 +35,29 @@ from .statistics import (
 
 __all__ = [
     "BenchmarkQualityGate",
+    "BenchmarkRunRecord",
+    "CollapsedFixedPointMLPBenchmarkResult",
     "ConfidenceInterval",
     "FixedPointMLPBenchmarkConfig",
+    "FixedPointMLPBenchmarkManifest",
     "FixedPointMLPBenchmarkResult",
     "FixedPointMLPConfigSummary",
     "FixedPointMLPInstance",
     "FixedPointMLPMatrixSummary",
     "LogLogScalingFit",
+    "ManifestExecution",
+    "ManifestStatisticalReport",
     "ProportionSummary",
     "ScalarSummary",
     "benchmark_environment_manifest",
     "build_fixed_point_mlp_instance",
+    "collapse_manifest_measurements",
     "fit_loglog_scaling",
     "run_fixed_point_mlp_benchmark",
     "run_fixed_point_mlp_benchmark_matrix",
+    "run_fixed_point_mlp_manifest",
     "summarize_fixed_point_mlp_benchmark_matrix",
+    "summarize_manifest_execution",
     "summarize_proportion",
     "summarize_scalar",
 ]
