@@ -101,10 +101,19 @@ from .unknown_k import (
     evaluate_bbht_schedule,
     randomized_grover_round_success,
 )
+from .unknown_k_decision import (
+    BBHTExistenceDecisionCertificate,
+    BBHTExistenceDecisionEvaluation,
+    certify_bbht_existence_decision,
+    evaluate_bbht_existence_decision,
+)
+from .unknown_k_staged import certify_staged_bbht_uniform_success
 
 __all__ = [
     "AlgorithmCost",
     "BBHTEvaluation",
+    "BBHTExistenceDecisionCertificate",
+    "BBHTExistenceDecisionEvaluation",
     "BBHTRoundReport",
     "BBHTSchedule",
     "BBHTUniformCertificate",
@@ -132,7 +141,9 @@ __all__ = [
     "binary_helstrom_success",
     "build_bbht_schedule",
     "build_packed_linear_gradient_probe_plan",
+    "certify_bbht_existence_decision",
     "certify_bbht_uniform_success",
+    "certify_staged_bbht_uniform_success",
     "channel_bayes_equivalence_reconstruction_success",
     "channel_bayes_reconstruction_success",
     "classical_queries_for_success",
@@ -145,6 +156,7 @@ __all__ = [
     "construct_linear_batch_collision",
     "construct_physical_probe_lower_bound_witness",
     "equal_covariance_gaussian_binary_success",
+    "evaluate_bbht_existence_decision",
     "evaluate_bbht_schedule",
     "evaluate_linear_gradient_oracle",
     "evaluate_linear_gradient_oracle_from_statistics",
