@@ -97,6 +97,11 @@ from .fixed_point_mlp import (
     compile_structure_preserving_fixed_point_mlp_threshold_oracle,
     compile_structure_preserving_fixed_point_mlp_value_oracle,
 )
+from .fixed_point_mlp_equality import (
+    FixedPointMLPEqualityLayout,
+    ReversibleFixedPointMLPEqualityOracle,
+    compile_structure_preserving_fixed_point_mlp_equality_oracle,
+)
 from .gradient_arithmetic import (
     GradientArithmeticRangeReport,
     GradientEqualityLayout,
@@ -171,6 +176,7 @@ __all__ = [
     "FixedPointAffineReLULayout",
     "FixedPointFormat",
     "FixedPointInversionReport",
+    "FixedPointMLPEqualityLayout",
     "FixedPointMLPLayout",
     "FixedPointMLPPredicateLayout",
     "GradientArithmeticRangeReport",
@@ -201,6 +207,7 @@ __all__ = [
     "ReversibleCircuit",
     "ReversibleFixedPointAffineReLUValueOracle",
     "ReversibleFixedPointAffineValueOracle",
+    "ReversibleFixedPointMLPEqualityOracle",
     "ReversibleFixedPointMLPPredicateOracle",
     "ReversibleFixedPointMLPValueOracle",
     "ReversibleFixedPointRequantizationOracle",
@@ -237,6 +244,7 @@ __all__ = [
     "compile_structure_preserving_affine_oracle",
     "compile_structure_preserving_deep_mlp_threshold_oracle",
     "compile_structure_preserving_fixed_point_affine_oracle",
+    "compile_structure_preserving_fixed_point_mlp_equality_oracle",
     "compile_structure_preserving_fixed_point_mlp_threshold_oracle",
     "compile_structure_preserving_fixed_point_mlp_value_oracle",
     "compile_structure_preserving_gradient_value_oracle",
