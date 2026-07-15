@@ -1,0 +1,77 @@
+name: uci-appliances-channel-permutation-publication
+
+on:
+  pull_request:
+    paths:
+      - "scripts/fetch_uci_appliances.py"
+      - "examples/uci_appliances_channel_permutation_publication.py"
+      - "src/qrecon/attacks/**"
+      - "src/qrecon/benchmarks/**"
+      - "src/qrecon/data/**"
+      - "src/qrecon/models/**"
+      - "src/qrecon/theory/**"
+      - ".github/workflows/uci-appliances-channel-permutation-publication.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uci-appliances-publication-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  independent-real-dataset:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Q-RECON
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[test]'
+      - name: Download and verify immutable UCI source
+        run: |
+          python scripts/fetch_uci_appliances.py \
+            --output-dir data/UCI-appliances \
+            --manifest outputs/uci-appliances-source.json
+      - name: Run focused symmetry and side-information tests
+        run: |
+          pytest -q \
+            tests/test_channel_permutation_fibre.py \
+            tests/test_channel_side_information.py
+      - name: Run independent UCI publication matrix
+        run: |
+          python examples/uci_appliances_channel_permutation_publication.py \
+            > outputs/uci-appliances-channel-permutation.json \
+            2> outputs/uci-appliances-channel-permutation.stderr
+      - name: Enforce publication quality gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          payload = json.loads(
+              Path("outputs/uci-appliances-channel-permutation.json").read_text()
+          )
+          assert payload["quality_gate"]["passed"] is True
+          assert payload["quality_gate"]["forty_primary_fibre_release_points"] is True
+          assert payload["quality_gate"]["one_hundred_side_information_trials"] is True
+          assert payload["source"]["csv_sha256"] == (
+              "2820bf712ad0275cb18b85a05250926100d8e65ebb9f4d2d016ca91ea152a25d"
+          )
+          for report in payload["architectures"].values():
+              assert report["quality_gate_passed"] is True
+          print(json.dumps(payload["quality_gate"], indent=2, sort_keys=True))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: uci-appliances-channel-permutation-publication
+          path: |
+            outputs/uci-appliances-source.json
+            outputs/uci-appliances-channel-permutation.json
+            outputs/uci-appliances-channel-permutation.stderr
+          if-no-files-found: error
