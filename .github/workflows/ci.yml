@@ -29,6 +29,7 @@ jobs:
       - name: Run executable theory, compiler, and reconstruction examples
         run: |
           python examples/theory_bounds.py > theory-bounds-${{ matrix.python-version }}.txt
+          python examples/head_gradient_stability.py > head-gradient-stability-${{ matrix.python-version }}.json
           python examples/coherent_oracle_demo.py > coherent-oracle-${{ matrix.python-version }}.json
           python examples/oracle_scaling.py > oracle-scaling-${{ matrix.python-version }}.json
           python examples/affine_oracle_cost_report.py > affine-cost-${{ matrix.python-version }}.json
@@ -54,6 +55,7 @@ jobs:
           path: |
             pytest-results-${{ matrix.python-version }}.xml
             theory-bounds-${{ matrix.python-version }}.txt
+            head-gradient-stability-${{ matrix.python-version }}.json
             coherent-oracle-${{ matrix.python-version }}.json
             oracle-scaling-${{ matrix.python-version }}.json
             affine-cost-${{ matrix.python-version }}.json
