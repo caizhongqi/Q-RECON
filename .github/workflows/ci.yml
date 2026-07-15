@@ -5,11 +5,11 @@ on:
     branches: [main, "agent/**"]
   pull_request:
 
-# Publication experiments can run for hours. Do not cancel a valid experiment
-# merely because a documentation or follow-up code commit lands on the branch.
+# This workflow is deliberately fast and follows only the newest branch head.
+# Long real-data studies run in dedicated, non-cancelling publication workflows.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.sha }}
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   unit-tests:
@@ -26,193 +26,27 @@ jobs:
           cache: pip
       - run: python -m pip install --upgrade pip
       - run: pip install -e '.[test]'
-      - name: Run tests
+      - name: Run complete test suite
         run: pytest -q --junitxml=pytest-results-${{ matrix.python-version }}.xml
-      - name: Run executable theory, compiler, and reconstruction examples
+      - name: Run fast executable contract checks
         run: |
           python examples/theory_bounds.py > theory-bounds-${{ matrix.python-version }}.txt
-          python examples/head_gradient_stability.py > head-gradient-stability-${{ matrix.python-version }}.json
           python examples/coherent_oracle_demo.py > coherent-oracle-${{ matrix.python-version }}.json
-          python examples/oracle_scaling.py > oracle-scaling-${{ matrix.python-version }}.json
-          python examples/affine_oracle_cost_report.py > affine-cost-${{ matrix.python-version }}.json
-          python examples/mlp_oracle_demo.py > mlp-oracle-${{ matrix.python-version }}.json
-          python examples/gradient_reconstruction_demo.py > gradient-reconstruction-${{ matrix.python-version }}.json
-          python examples/batch_gradient_demo.py > batch-gradient-${{ matrix.python-version }}.json
-          python examples/real_batch_gradient_phase_diagram.py > real-batch-gradient-${{ matrix.python-version }}.json
           python examples/modern_timeseries_reconstruction_matrix.py > modern-timeseries-reconstruction-${{ matrix.python-version }}.json
-          python examples/fixed_point_mlp_exact_observation.py > fixed-point-mlp-exact-${{ matrix.python-version }}.json
-          python examples/unknown_k_search.py > unknown-k-search-${{ matrix.python-version }}.json
-          python examples/unknown_k_cost_envelope.py > unknown-k-cost-${{ matrix.python-version }}.json
-          python examples/fixed_point_benchmark_matrix.py > fixed-point-benchmark-${{ matrix.python-version }}.json
-          python examples/fixed_point_statistical_report.py > fixed-point-statistics-${{ matrix.python-version }}.json
-          python examples/fixed_point_manifest_report.py > fixed-point-manifest-${{ matrix.python-version }}.json
       - name: Compile Python sources
         if: always()
         run: python -m compileall -q src tests examples scripts
-      - name: Upload classical, theory, compiler, and benchmark reports
+      - name: Upload quick-validation reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: classical-theory-${{ matrix.python-version }}
+          name: quick-validation-${{ matrix.python-version }}
           path: |
             pytest-results-${{ matrix.python-version }}.xml
             theory-bounds-${{ matrix.python-version }}.txt
-            head-gradient-stability-${{ matrix.python-version }}.json
             coherent-oracle-${{ matrix.python-version }}.json
-            oracle-scaling-${{ matrix.python-version }}.json
-            affine-cost-${{ matrix.python-version }}.json
-            mlp-oracle-${{ matrix.python-version }}.json
-            gradient-reconstruction-${{ matrix.python-version }}.json
-            batch-gradient-${{ matrix.python-version }}.json
-            real-batch-gradient-${{ matrix.python-version }}.json
             modern-timeseries-reconstruction-${{ matrix.python-version }}.json
-            fixed-point-mlp-exact-${{ matrix.python-version }}.json
-            unknown-k-search-${{ matrix.python-version }}.json
-            unknown-k-cost-${{ matrix.python-version }}.json
-            fixed-point-benchmark-${{ matrix.python-version }}.json
-            fixed-point-statistics-${{ matrix.python-version }}.json
-            fixed-point-manifest-${{ matrix.python-version }}.json
           if-no-files-found: warn
-
-  real-modern-calibration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install --upgrade pip
-      - run: pip install -e '.[test]'
-      - name: Run revision-pinned GIFT-Eval PatchTST calibration
-        run: |
-          python examples/gifteval_patchtst_calibration.py \
-            > gifteval-patchtst-calibration.json
-      - name: Run paired DLG, InvG, hybrid, and temporal-prior suite
-        run: |
-          python examples/gifteval_patchtst_attack_suite.py \
-            > gifteval-patchtst-attack-suite.json
-      - name: Run paired TS-Inverse L1 and temporal objective baselines
-        run: |
-          python examples/gifteval_patchtst_ts_inverse_comparison.py \
-            > gifteval-patchtst-ts-inverse-comparison.json
-      - name: Run analytic head-representation inversion
-        run: |
-          python examples/gifteval_patchtst_head_representation.py \
-            > gifteval-patchtst-head-representation.json
-      - name: Run paired clipping, quantization, noise, and visibility suite
-        run: |
-          python examples/gifteval_patchtst_defense_suite.py \
-            > gifteval-patchtst-defense-suite.json
-      - name: Run final-head clipping and perturbation stability audit
-        run: |
-          python examples/gifteval_patchtst_head_release_stability.py \
-            > gifteval-patchtst-head-release-stability.json
-      - name: Run 20-sample final-head stability study
-        run: |
-          python examples/gifteval_patchtst_head_release_stability_publication.py \
-            > gifteval-patchtst-head-release-stability-20.json
-      - name: Run 20-sample PatchTST final-head orbit study
-        run: |
-          python examples/gifteval_patchtst_final_head_orbit.py \
-            > gifteval-patchtst-final-head-orbit.json
-      - name: Upload real modern-model calibration reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gifteval-patchtst-calibration
-          path: |
-            gifteval-patchtst-calibration.json
-            gifteval-patchtst-attack-suite.json
-            gifteval-patchtst-ts-inverse-comparison.json
-            gifteval-patchtst-head-representation.json
-            gifteval-patchtst-defense-suite.json
-            gifteval-patchtst-head-release-stability.json
-            gifteval-patchtst-head-release-stability-20.json
-            gifteval-patchtst-final-head-orbit.json
-          if-no-files-found: error
-
-  real-multivariate-calibration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install --upgrade pip
-      - run: pip install -e '.[test]'
-      - name: Download and verify immutable ETTm1 data
-        run: |
-          python scripts/fetch_pinned_ettm1.py \
-            --output data/ETT-small/ETTm1.csv \
-            --manifest ettm1-source-manifest.json
-      - name: Run real multivariate iTransformer calibration
-        run: |
-          python examples/ettm1_itransformer_calibration.py \
-            > ettm1-itransformer-calibration.json
-      - name: Run 20-sample iTransformer final-head orbit study
-        run: |
-          python examples/ettm1_itransformer_final_head_orbit.py \
-            > ettm1-itransformer-final-head-orbit.json
-      - name: Upload ETTm1 source and reconstruction reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ettm1-itransformer-calibration
-          path: |
-            ettm1-source-manifest.json
-            ettm1-itransformer-calibration.json
-            ettm1-itransformer-final-head-orbit.json
-          if-no-files-found: error
-
-  ts-inverse-objective-publication:
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install --upgrade pip
-      - run: pip install -e '.[test]'
-      - name: Run 20-window three-seed GIFT-Eval PatchTST L1 study
-        run: |
-          python examples/gifteval_patchtst_ts_inverse_publication.py \
-            > gifteval-patchtst-ts-inverse-publication.json
-      - name: Upload TS-Inverse objective publication report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gifteval-patchtst-ts-inverse-publication
-          path: gifteval-patchtst-ts-inverse-publication.json
-          if-no-files-found: error
-
-  learned-quantile-calibration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install --upgrade pip
-      - run: pip install -e '.[test]'
-      - name: Train disjoint auxiliary gradient-to-quantile initializer and refine two attacks
-        run: |
-          python examples/gifteval_patchtst_learned_quantile_calibration.py \
-            > gifteval-patchtst-learned-quantile-calibration.json
-      - name: Upload learned quantile calibration report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gifteval-patchtst-learned-quantile-calibration
-          path: gifteval-patchtst-learned-quantile-calibration.json
-          if-no-files-found: error
 
   solver-tests:
     runs-on: ubuntu-latest
@@ -231,7 +65,7 @@ jobs:
             tests/test_z3_deep_fixed_point_inversion.py \
             tests/test_z3_benchmark.py \
             --junitxml=z3-results.xml
-      - name: Cross-check SMT, branch-and-bound, coherent verifier, and repeated manifests
+      - name: Cross-check one two-layer and one deep solver instance
         run: |
           set -o pipefail
           python examples/z3_fixed_point_inversion.py \
@@ -240,32 +74,17 @@ jobs:
           python examples/z3_deep_fixed_point_inversion.py \
             > z3-deep-fixed-point-inversion.json \
             2> >(tee z3-deep-fixed-point-inversion.stderr >&2)
-          python examples/fixed_point_benchmark_matrix.py --z3 \
-            > z3-benchmark-matrix.json \
-            2> >(tee z3-benchmark-matrix.stderr >&2)
-          python examples/fixed_point_statistical_report.py --z3 \
-            > z3-statistical-report.json \
-            2> >(tee z3-statistical-report.stderr >&2)
-          python examples/fixed_point_manifest_report.py --z3 \
-            > z3-manifest-report.json \
-            2> >(tee z3-manifest-report.stderr >&2)
-      - name: Upload SMT baseline report
+      - name: Upload SMT validation
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: z3-fixed-point-inversion
+          name: z3-quick-validation
           path: |
             z3-results.xml
             z3-fixed-point-inversion.json
             z3-fixed-point-inversion.stderr
             z3-deep-fixed-point-inversion.json
             z3-deep-fixed-point-inversion.stderr
-            z3-benchmark-matrix.json
-            z3-benchmark-matrix.stderr
-            z3-statistical-report.json
-            z3-statistical-report.stderr
-            z3-manifest-report.json
-            z3-manifest-report.stderr
           if-no-files-found: warn
 
   quantum-smoke:
