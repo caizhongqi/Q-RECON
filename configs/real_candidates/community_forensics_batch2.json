@@ -1,0 +1,53 @@
+{
+  "schema_version": "qrecon.real-batch-gradient-manifest.v1",
+  "dataset": "community_forensics_small",
+  "dataset_revision": "6c539a534c07917307c381f5af4053c6091b5278",
+  "split": "train",
+  "candidate_count": 16,
+  "context": 16,
+  "horizon": 1,
+  "image_size": 8,
+  "streaming": true,
+  "sampling": "datasets",
+  "seed": 17,
+  "feature_count": 8,
+  "feature_selection": "uniform_stride",
+  "target_coordinate": 0,
+  "target_batch_indices": [0, 1],
+  "quantizations": [
+    {
+      "bits_per_value": 8,
+      "fractional_bits": 6,
+      "signed": true,
+      "overflow": "raise"
+    },
+    {
+      "bits_per_value": 10,
+      "fractional_bits": 8,
+      "signed": true,
+      "overflow": "raise"
+    },
+    {
+      "bits_per_value": 12,
+      "fractional_bits": 10,
+      "signed": true,
+      "overflow": "raise"
+    }
+  ],
+  "model_seed": 31,
+  "model_weights": [1, -1, 2, -2, 1, -1, 2, -2],
+  "model_bias": 0,
+  "gradient_bits": 48,
+  "target_success": 0.9,
+  "bbht_growth_factor": 1.1428571428571428,
+  "bbht_attempts_per_stage": 2,
+  "bbht_max_stages": 256,
+  "max_exact_population": 4096,
+  "max_exact_batches": 4096,
+  "max_basis_verification_bits": 10,
+  "max_minterm_table_bits": 4096,
+  "access_contract": "explicit_compilation",
+  "reusable_instances": [1, 10, 100, 1000],
+  "expected_selected_source_sha256": null,
+  "publication_mode": false
+}
