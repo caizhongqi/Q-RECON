@@ -5,6 +5,10 @@ on:
     branches: [main, "agent/**"]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
@@ -35,7 +39,6 @@ jobs:
           python examples/unknown_k_search.py > unknown-k-search-${{ matrix.python-version }}.json
           python examples/unknown_k_cost_envelope.py > unknown-k-cost-${{ matrix.python-version }}.json
           python examples/fixed_point_benchmark_matrix.py > fixed-point-benchmark-${{ matrix.python-version }}.json
-          python examples/fixed_point_statistical_report.py > fixed-point-statistics-${{ matrix.python-version }}.json
       - name: Compile Python sources
         if: always()
         run: python -m compileall -q src tests examples
@@ -57,7 +60,6 @@ jobs:
             unknown-k-search-${{ matrix.python-version }}.json
             unknown-k-cost-${{ matrix.python-version }}.json
             fixed-point-benchmark-${{ matrix.python-version }}.json
-            fixed-point-statistics-${{ matrix.python-version }}.json
           if-no-files-found: warn
 
   solver-tests:
@@ -85,9 +87,6 @@ jobs:
           python examples/fixed_point_benchmark_matrix.py --z3 \
             > z3-benchmark-matrix.json \
             2> >(tee z3-benchmark-matrix.stderr >&2)
-          python examples/fixed_point_statistical_report.py --z3 \
-            > z3-statistical-report.json \
-            2> >(tee z3-statistical-report.stderr >&2)
       - name: Upload SMT baseline report
         if: always()
         uses: actions/upload-artifact@v4
@@ -99,8 +98,6 @@ jobs:
             z3-fixed-point-inversion.stderr
             z3-benchmark-matrix.json
             z3-benchmark-matrix.stderr
-            z3-statistical-report.json
-            z3-statistical-report.stderr
           if-no-files-found: warn
 
   quantum-smoke:
