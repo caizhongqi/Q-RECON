@@ -15,6 +15,12 @@ SOURCE_URL = (
 CSV_MEMBER = "energydata_complete.csv"
 DATASET_DOI = "10.24432/C5VC8G"
 LICENSE = "CC BY 4.0"
+EXPECTED_ARCHIVE_SHA256 = (
+    "2fccf354445d886e7917620b0195db1f3e3e34d5a067a93b844694a4c561255a"
+)
+EXPECTED_CSV_SHA256 = (
+    "2820bf712ad0275cb18b85a05250926100d8e65ebb9f4d2d016ca91ea152a25d"
+)
 
 
 def _sha256(path: Path) -> str:
@@ -29,8 +35,12 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", default="data/UCI-appliances")
     parser.add_argument("--manifest", default="outputs/uci-appliances-source.json")
-    parser.add_argument("--expected-zip-sha256")
-    parser.add_argument("--expected-csv-sha256")
+    parser.add_argument(
+        "--expected-zip-sha256", default=EXPECTED_ARCHIVE_SHA256
+    )
+    parser.add_argument(
+        "--expected-csv-sha256", default=EXPECTED_CSV_SHA256
+    )
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir)
