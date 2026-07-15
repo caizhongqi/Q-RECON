@@ -21,6 +21,11 @@ from .fixed_point_mlp import (
     run_fixed_point_mlp_benchmark,
     run_fixed_point_mlp_benchmark_matrix,
 )
+from .head_representation_reconstruction import (
+    HeadRepresentationBenchmarkAttempt,
+    HeadRepresentationBenchmarkReport,
+    run_head_representation_reconstruction_benchmark,
+)
 from .manifest import (
     BenchmarkRunRecord,
     CollapsedFixedPointMLPBenchmarkResult,
@@ -86,6 +91,8 @@ __all__ = [
     "FixedPointMLPInstance",
     "FixedPointMLPMatrixSummary",
     "GradientRangeCertificate",
+    "HeadRepresentationBenchmarkAttempt",
+    "HeadRepresentationBenchmarkReport",
     "LoadedRealCandidateSet",
     "LogLogScalingFit",
     "MODERN_FORECASTING_ARCHITECTURES",
@@ -116,6 +123,7 @@ __all__ = [
     "run_fixed_point_mlp_benchmark",
     "run_fixed_point_mlp_benchmark_matrix",
     "run_fixed_point_mlp_manifest",
+    "run_head_representation_reconstruction_benchmark",
     "run_modern_timeseries_attack_suite",
     "run_modern_timeseries_reconstruction_benchmark",
     "run_real_batch_gradient_phase_diagram",
