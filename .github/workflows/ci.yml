@@ -31,6 +31,7 @@ jobs:
           python examples/mlp_oracle_demo.py > mlp-oracle-${{ matrix.python-version }}.json
           python examples/gradient_reconstruction_demo.py > gradient-reconstruction-${{ matrix.python-version }}.json
           python examples/batch_gradient_demo.py > batch-gradient-${{ matrix.python-version }}.json
+          python examples/fixed_point_mlp_exact_observation.py > fixed-point-mlp-exact-${{ matrix.python-version }}.json
       - name: Compile Python sources
         if: always()
         run: python -m compileall -q src tests examples
@@ -48,6 +49,7 @@ jobs:
             mlp-oracle-${{ matrix.python-version }}.json
             gradient-reconstruction-${{ matrix.python-version }}.json
             batch-gradient-${{ matrix.python-version }}.json
+            fixed-point-mlp-exact-${{ matrix.python-version }}.json
           if-no-files-found: warn
 
   quantum-smoke:
