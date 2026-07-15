@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from .attacks import (
     GradientInversionAttack,
+    HeadRepresentationInversionAttack,
     infer_class_label_from_last_bias,
     invert_first_linear_gradient,
     leak_gradients,
@@ -220,7 +221,8 @@ def run_experiment(config: dict[str, Any]) -> dict[str, Any]:
         known_target = infer_class_label_from_last_bias(model, observed)
 
     optimization: dict[str, float | int] | None = None
-    method = attack_config.get("method", "gradient_matching")
+    head_leakage: dict[str, object] | None = None
+    method = str(attack_config.get("method", "gradient_matching"))
     if method == "analytic_linear":
         if attack_batch_size != 1:
             raise ValueError("analytic first-linear recovery requires batch size one")
@@ -240,6 +242,50 @@ def run_experiment(config: dict[str, Any]) -> dict[str, Any]:
                 "regularizer": 0.0,
             }
         ]
+    elif method == "head_representation":
+        if task != "forecasting" or attack_batch_size != 1:
+            raise ValueError(
+                "head-representation inversion currently requires forecasting batch size one"
+            )
+        architecture = str(victim_config.get("architecture", "mlp")).lower()
+        if (
+            true_x.ndim == 3
+            and true_x.shape[2] > 1
+            and architecture in {"patchtst", "itransformer"}
+        ):
+            raise ValueError(
+                "multivariate shared-head PatchTST/iTransformer does not expose one "
+                "separable final-head representation"
+            )
+        prior = _prior(tuple(true_x.shape), mode, attack_config)
+        attack = HeadRepresentationInversionAttack(
+            model,
+            observed,
+            prior,
+            mode=mode,
+            effective_samples=1,
+            steps=int(attack_config.get("steps", 300)),
+            learning_rate=float(attack_config.get("learning_rate", 0.05)),
+            regularization=float(attack_config.get("regularization", 0.0)),
+            gradient_clip_norm=attack_config.get("gradient_clip_norm"),
+            record_every=attack_config.get("record_every"),
+        )
+        result = attack.run()
+        reconstruction = result.reconstruction
+        reconstructed_target = (
+            known_target.detach()
+            if known_target is not None
+            else torch.full_like(true_target, float("nan"))
+        )
+        history = list(result.history)
+        optimization = {
+            "best_objective": result.best_objective,
+            "best_representation_loss": result.best_representation_loss,
+            "best_step": result.best_step,
+            "final_objective": result.final_objective,
+            "final_representation_loss": result.final_representation_loss,
+        }
+        head_leakage = result.leakage.to_dict(include_feature=False)
     else:
         prior = _prior(tuple(true_x.shape), mode, attack_config)
         attack = GradientInversionAttack(
@@ -258,6 +304,19 @@ def run_experiment(config: dict[str, Any]) -> dict[str, Any]:
             layer_weighting=attack_config.get("layer_weighting", "parameter"),
             gradient_clip_norm=attack_config.get("gradient_clip_norm"),
             record_every=attack_config.get("record_every"),
+            trend_regularization=attack_config.get("trend_regularization", 0.0),
+            trend_loss=attack_config.get("trend_loss", "l1"),
+            trend_detach=attack_config.get("trend_detach", True),
+            periodicity_regularization=attack_config.get(
+                "periodicity_regularization", 0.0
+            ),
+            periodicity_period=attack_config.get("periodicity_period"),
+            periodicity_loss=attack_config.get("periodicity_loss", "l1"),
+            low_resolution_regularization=attack_config.get(
+                "low_resolution_regularization", 0.0
+            ),
+            low_resolution_factor=attack_config.get("low_resolution_factor", 2),
+            low_resolution_loss=attack_config.get("low_resolution_loss", "l1"),
         )
         result = attack.run()
         reconstruction = result.reconstruction
@@ -293,6 +352,7 @@ def run_experiment(config: dict[str, Any]) -> dict[str, Any]:
         ),
         "metrics": reconstruction_metrics(true_x, reconstruction, mode=mode),
         "optimization": optimization,
+        "head_leakage": head_leakage,
         "history": history,
     }
     if attack_batch_size > 1:
