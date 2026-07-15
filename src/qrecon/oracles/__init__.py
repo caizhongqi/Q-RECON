@@ -87,16 +87,28 @@ from .fixed_point_inversion import (
     fixed_point_mlp_output_bounds,
     solve_fixed_point_mlp_exact_output,
 )
+from . import fixed_point_mlp as _fixed_point_mlp_module
 from .fixed_point_mlp import (
     FixedPointAffineReLULayout,
     FixedPointMLPLayout,
     FixedPointMLPPredicateLayout,
     ReversibleFixedPointAffineReLUValueOracle,
     ReversibleFixedPointMLPPredicateOracle,
-    ReversibleFixedPointMLPValueOracle,
     compile_structure_preserving_fixed_point_mlp_threshold_oracle,
     compile_structure_preserving_fixed_point_mlp_value_oracle,
 )
+from .fixed_point_mlp_reachability import (
+    FixedPointMLPReachabilityCertificate,
+    ReversibleFixedPointMLPValueOracle,
+)
+
+# All public and module-internal constructors now resolve the reachability-aware
+# value oracle. Existing compiler functions and predicate classes perform their
+# global lookup at call time, so they inherit the same certified range contract.
+_fixed_point_mlp_module.ReversibleFixedPointMLPValueOracle = (
+    ReversibleFixedPointMLPValueOracle
+)
+
 from .fixed_point_mlp_equality import (
     FixedPointMLPEqualityLayout,
     ReversibleFixedPointMLPEqualityOracle,
@@ -187,6 +199,7 @@ __all__ = [
     "FixedPointMLPEqualityLayout",
     "FixedPointMLPLayout",
     "FixedPointMLPPredicateLayout",
+    "FixedPointMLPReachabilityCertificate",
     "GradientArithmeticRangeReport",
     "GradientEqualityLayout",
     "GradientRangeReport",
