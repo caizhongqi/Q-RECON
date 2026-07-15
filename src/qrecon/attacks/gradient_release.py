@@ -72,6 +72,7 @@ class GradientRelease:
     visible_parameter_indices: tuple[int, ...]
     visible_parameter_names: tuple[str, ...]
     total_parameter_tensors: int
+    clip_norm: float | None
     raw_l2_norm: float
     clipped_l2_norm: float
     clipping_factor: float
@@ -92,6 +93,7 @@ class GradientRelease:
             "visible_parameter_names": list(self.visible_parameter_names),
             "visible_parameter_tensors": len(self.visible_parameter_indices),
             "total_parameter_tensors": self.total_parameter_tensors,
+            "clip_norm": self.clip_norm,
             "raw_l2_norm": self.raw_l2_norm,
             "clipped_l2_norm": self.clipped_l2_norm,
             "clipping_factor": self.clipping_factor,
@@ -104,16 +106,19 @@ class GradientRelease:
             "quantized_saturation_rate": self.quantized_saturation_rate,
         }
 
-    def attack_transform_kwargs(self) -> dict[str, object]:
-        """Parameters needed to apply the known deterministic release map to candidates."""
+    def deterministic_attack_contract(self) -> dict[str, object]:
+        """Known deterministic operations an attacker can apply to candidates.
+
+        Gaussian noise is intentionally absent: its realization is not public.
+        The declared clipping threshold remains part of the contract even when the
+        observed private gradient happened not to trigger clipping.
+        """
 
         return {
             "visible_parameter_indices": self.visible_parameter_indices,
-            "release_clip_norm": (
-                None if self.clipping_factor == 1.0 else self.clipped_l2_norm
-            ),
-            "release_quantization_bits": self.quantization_bits,
-            "release_quantization_scale": self.quantization_scale,
+            "clip_norm": self.clip_norm,
+            "quantization_bits": self.quantization_bits,
+            "quantization_scale": self.quantization_scale,
         }
 
 
@@ -249,6 +254,7 @@ def release_gradients(
         visible_parameter_indices=indices,
         visible_parameter_names=names,
         total_parameter_tensors=len(parameters),
+        clip_norm=(None if spec.clip_norm is None else float(spec.clip_norm)),
         raw_l2_norm=raw_norm,
         clipped_l2_norm=clipped_norm,
         clipping_factor=factor,
