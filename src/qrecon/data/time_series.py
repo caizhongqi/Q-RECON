@@ -43,6 +43,7 @@ def load_gifteval(
     ``revision`` is forwarded to Hugging Face Datasets so publication manifests
     can pin a commit SHA or immutable tag instead of silently tracking ``main``.
     """
+
     from datasets import load_dataset
 
     kwargs: dict[str, object] = {
@@ -73,6 +74,7 @@ def load_time_repository(
     TIME contains heterogeneous source files. This adapter intentionally treats
     every sufficiently long numeric CSV column as an independent variate.
     """
+
     import pandas as pd
 
     root = Path(root)
@@ -106,3 +108,50 @@ def synthetic_forecasting(
         assert pair is not None
         windows.append(pair)
     return _as_dataset(windows)
+
+
+def synthetic_multivariate_forecasting(
+    samples: int = 32,
+    context: int = 96,
+    horizon: int = 24,
+    channels: int = 7,
+    seed: int = 7,
+) -> TensorDataset:
+    """Generate correlated multivariate windows for modern forecaster tests.
+
+    The returned tensors have shapes ``[samples, context, channels]`` and
+    ``[samples, horizon, channels]``. Channels combine shared seasonal factors,
+    channel-specific frequencies, lags and trends so cross-variate attention is
+    non-trivial while the generator remains deterministic.
+    """
+
+    if samples <= 0 or context <= 0 or horizon <= 0 or channels <= 0:
+        raise ValueError("samples, context, horizon and channels must be positive")
+    rng = np.random.default_rng(seed)
+    total = context + horizon
+    time = np.linspace(0, 8 * np.pi, total, dtype=np.float32)
+    inputs: list[np.ndarray] = []
+    targets: list[np.ndarray] = []
+    for _ in range(samples):
+        shared_phase = rng.uniform(0.0, 2.0 * np.pi)
+        shared = np.sin(time + shared_phase) + 0.3 * np.sin(0.25 * time)
+        series: list[np.ndarray] = []
+        for channel in range(channels):
+            lag = channel % max(1, min(8, context // 4))
+            frequency = 1.0 + 0.08 * channel
+            local = 0.45 * np.sin(frequency * time + rng.uniform(0.0, np.pi))
+            trend = rng.uniform(-0.01, 0.01) * np.arange(total, dtype=np.float32)
+            values = np.roll(shared, lag) + local + trend
+            values += rng.normal(0.0, 0.03, size=total)
+            context_values = values[:context]
+            mean = float(context_values.mean())
+            scale = float(context_values.std())
+            scale = scale if scale > 1e-6 else 1.0
+            series.append(((values - mean) / scale).astype(np.float32))
+        matrix = np.stack(series, axis=-1)
+        inputs.append(matrix[:context])
+        targets.append(matrix[context:])
+    return TensorDataset(
+        torch.from_numpy(np.stack(inputs)).float(),
+        torch.from_numpy(np.stack(targets)).float(),
+    )
