@@ -35,6 +35,11 @@ jobs:
           python scripts/fetch_pinned_ett_variants.py etth1 \
             --output data/ETT-small/ETTh1.csv \
             --manifest etth1-source-manifest.json
+      - name: Download and verify ETTh2
+        run: |
+          python scripts/fetch_pinned_ett_variants.py etth2 \
+            --output data/ETT-small/ETTh2.csv \
+            --manifest etth2-source-manifest.json
       - name: Upload immutable source manifests
         uses: actions/upload-artifact@v4
         with:
@@ -42,4 +47,5 @@ jobs:
           path: |
             ettm2-source-manifest.json
             etth1-source-manifest.json
+            etth2-source-manifest.json
           if-no-files-found: error
